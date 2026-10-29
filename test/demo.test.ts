@@ -66,3 +66,11 @@ test('image folder simulation is gated, bounded and explicitly labelled', async 
   assert.equal(frames[0]?.simulated, true);
   assert.match(frames[0]?.image ?? '', /^data:image\/svg\+xml;base64,/);
 });
+
+test('demo report compares complete chat windows so the scripted decline is accurate', () => {
+  const demo = new DemoSession(true);
+  for (let tick = 0; tick < 12; tick++) demo.tick();
+  const curves = demo.snapshot().curves;
+  assert.equal(curves[0]?.chat, 20);
+  assert.equal(curves.at(-1)?.chat, 12);
+});

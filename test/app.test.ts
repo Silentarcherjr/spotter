@@ -16,3 +16,14 @@ for (const simulated of [false, true]) {
     } finally { await app.close(); }
   });
 }
+
+test('private API rejects foreign hosts/origins and reports the actual HUD opt-in state', async () => {
+  const app = createApp({ databasePath: ':memory:', simulated: true });
+  try {
+    assert.equal((await app.inject({ url: '/api/status', headers: { host: 'foreign.example' } })).statusCode, 403);
+    assert.equal((await app.inject({ method: 'POST', url: '/api/hud', headers: { origin: 'https://foreign.example' }, payload: { enabled: true } })).statusCode, 403);
+    assert.equal((await app.inject('/api/status')).json().hudEnabled, false);
+    await app.inject({ method: 'POST', url: '/api/hud', payload: { enabled: true } });
+    assert.equal((await app.inject('/api/status')).json().hudEnabled, true);
+  } finally { await app.close(); }
+});

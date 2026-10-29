@@ -26,7 +26,7 @@ export function transitionTagOut(previous: TagOutState, event: TagOutEvent, cont
     const returning = state.phase === 'tag-back';
     const source = returning ? state.partnerId : state.homeId;
     const target = returning ? state.homeId : state.partnerId;
-    const targetLive = context.crew.some((partner) => partner.id === target && partner.live);
+    const targetLive = context.crew.some((partner) => partner.id === target && partner.live && (returning || (Number.isFinite(partner.energy) && partner.energy >= 60 && partner.energy <= 100)));
     const recent = context.recentRaids.filter((at) => Number.isFinite(at) && at > context.now - 600_000 && at <= context.now);
     if (target && source === context.broadcasterId && source === context.tokenOwnerId && context.sourceLive && targetLive && recent.length < 10) {
       state = { ...state, phase: 'confirming', returning, cancelPending: false };

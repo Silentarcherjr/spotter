@@ -64,7 +64,7 @@
 - Strengthened calibration coverage after a failing sparse-sample test: ten-minute span plus at least 300 valid windows. Saved numeric baseline, stale-sensor status, recalibration, bounded rolling samples and half-minute aggregate report storage in SQLite.
 - Added pure, tested rally progression separate from energy and pure session report summaries; wired opt-in overlay stamina/rally and combined alert. Added report page and energy/chat curves.
 - Tests added before core/modules: numeric-only contract, sparse calibration, 150 Hz synthetic tone extraction, baseline persistence/staleness, rally separation/dedupe, reports and WebSocket accept/reject. Fixed a 30-second shutdown tail discovered in injected WebSocket testing by terminating sockets during preClose.
-- Verification: 34 tests expected with the new WebSocket test; typecheck/lint/build pass. No real microphone opened, no raw audio recorded/uploaded; real microphone/browser permission and live correlation proof remain HUMAN work.
+- Verification: 34 tests passed including the new WebSocket test; typecheck/lint/build pass. No real microphone opened, no raw audio recorded/uploaded; real microphone/browser permission and live correlation proof remain HUMAN work.
 
 ## 2026-10-29 — Phase 6 Tag Out implementation, real raid proof pending
 
@@ -74,3 +74,14 @@
 - Ambiguous write failures remain confirming with an explicit cancel path; no automatic retry or false success. Added persisted relay state keyed by broadcaster, proved recovery across restart and isolation when account identity changes.
 - Added partner-side tag-back approval, cancel routes, crew config example and opt-in covering overlay. Display name comes from the raid event, never an inferred location.
 - Tests: private/loopback crew transport and unavailable data, approval/live guards, uncertain request cancellation, persisted state/attempts and authenticated minimal status endpoint. Real two-channel raid/recording remains a HUMAN requirement.
+
+## 2026-10-29 — Phase 7 offline polish and verification; human handoff
+
+- Consolidated README with setup, architecture diagram, ethics/limitations, exact test count, Codex usage and explicit distinction between offline implementation and unproven live flows. Added docs/LIVE_CHECKLIST.md for credentials, Twitch CLI captures, real OBS/mic/raid recordings and submission. Repo visibility remains private.
+- Added configurable exposure thresholds, stronger strict TypeScript unused checks, service-boundary/core-purity regression, private Host/origin guards and HUD state reflection. Public overlay hides stale measurements on API failure and hides its empty panel when disabled outside simulation.
+- Added a core regression for a suggested partner losing energy before approval; outbound approval now revalidates that eligibility. The UI identifies the selected partner and exposes ambiguous request status.
+- Browser QA: transparent root/body and no horizontal overflow at 1280x720; overlay also inspected at 1920x1080, viewport reset afterward. Report rendered; SIM refused microphone activation without opening permissions. Full demo raid/tag-back flow was previously exercised through clicks in phase 2.
+- Live UI finding: demo report compared an incomplete initial chat window, showing +20% instead of the scripted decline. Added a failing regression and seeded the simulated window; report now visibly shows 20→12 messages/min (−40%). Rally remains separate from energy and provides a dashboard nudge.
+- The new Host guard correctly rejected the old injected WS test client without a Host header. Updated that fixture to send a local Host and explicitly verified foreign Origin rejection.
+- Final verification: npm test 45/45 pass; typecheck, lint, build and git diff --check pass. Tests run on Node 25.4.0. Browser artifacts remain outside the repository under /private/tmp.
+- Required remaining work is HUMAN/external-state work: configure secrets locally, install Twitch CLI and capture fixtures, open/configure OBS, authorize two test channels, use owned media, verify/record all real flows, then video/submission. None of those has been represented as complete. Temporary QA servers are stopped at handoff.

@@ -31,6 +31,8 @@ export class DemoSession {
   constructor(enabled: boolean) {
     if (!enabled) throw new Error('Simulation requires SIM=1');
     this.crew = simulatedCrew(true);
+    this.chats = syntheticChat(true, -1, this.now);
+    this.events = [...this.chats];
     this.baseline = calibrate(Array.from({ length: 601 }, (_, index) => voiceFeatures(true, index * 1_000, false)), this.now).baseline;
   }
   private raid(event: TagOutEvent) {

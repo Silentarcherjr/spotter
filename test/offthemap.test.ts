@@ -80,3 +80,12 @@ test('Chat Guard never deletes on classifier failure and audits approved deletio
     assert.ok(!JSON.stringify(guard.snapshot()).includes('private fixture content'));
   } finally { db.close(); }
 });
+
+test('exposure warning/action thresholds are configurable and validated before startup', async () => {
+  let actions = 0;
+  const dependencies = { capture: async () => 'data:image/jpeg;base64,AA==', analyze: async () => [{ category: 'transit' as const, severity: 3, confidence: 1 }], privacy: async () => { actions++; }, restore: async () => {}, marker: async () => {} };
+  assert.throws(() => new OffTheMap(dependencies, { warn: 90, act: 60 }));
+  const module = new OffTheMap(dependencies, { warn: 10, act: 20 });
+  await module.sample(0);
+  assert.equal(actions, 1);
+});

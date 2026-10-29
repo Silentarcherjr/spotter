@@ -156,3 +156,8 @@ test('receiving partner recognizes a configured incoming raid and home recognize
   assert.equal(retry.state.cancelPending, false);
   assert.deepEqual(step(retry.state, { type: 'cancel' }).actions, [{ type: 'cancel_raid' }]);
 });
+
+test('outbound relay revalidates partner energy before accepting approval', () => {
+  const suggestion = suggested();
+  assert.deepEqual(step(suggestion, { type: 'approve' }, { crew: [{ id: 'partner', live: true, energy: 10 }] }).actions, []);
+});

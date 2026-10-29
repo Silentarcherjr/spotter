@@ -5,21 +5,22 @@ import { clueDescriptions } from '../../ai/vision-contract.ts';
 interface Dependencies { capture: () => Promise<string>; analyze: (frame: string) => Promise<Clue[]>; privacy: () => Promise<void>; restore: () => Promise<void>; marker: () => Promise<unknown> }
 export class OffTheMap {
   private dependencies: Dependencies;
+  private thresholds: { warn: number; act: number };
   private exposure = initialExposure();
   private frames: FrameObservation[] = [];
   private busy = false;
   private privacyActive = false;
   private actionStatus = 'idle';
   private timeline: { at: number; score: number; actions: string[]; simulated: false }[] = [];
-  constructor(dependencies: Dependencies) { this.dependencies = dependencies; }
+  constructor(dependencies: Dependencies, thresholds = { warn: 60, act: 80 }) { this.dependencies = dependencies; this.thresholds = thresholds; decideExposure(this.exposure, 0, thresholds); }
   async sample(now: number): Promise<void> {
     if (this.busy) return;
     this.busy = true;
     try {
       let clues: Clue[];
       try { clues = await this.dependencies.analyze(await this.dependencies.capture()); }
-      catch { this.exposure = decideExposure(this.exposure, null).state; return; }
-      const decision = decideExposure(this.exposure, scoreFindability(clues, this.frames, now));
+      catch { this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
+      const decision = decideExposure(this.exposure, scoreFindability(clues, this.frames, now), this.thresholds);
       this.exposure = decision.state;
       this.frames = [...this.frames.filter((frame) => now - frame.at <= 120_000), { at: now, clues }];
       this.timeline = [...this.timeline, { at: now, score: this.exposure.score, actions: decision.actions, simulated: false as const }].slice(-120);

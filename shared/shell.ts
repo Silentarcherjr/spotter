@@ -10,13 +10,13 @@ const links = '<nav><a href="/dashboard/">Dashboard</a><a href="/dashboard/repor
 if (page === 'dashboard') {
   app.innerHTML = `<header><div><span class="eyebrow">YOUR STREAM. YOUR BACKUP.</span><h1>Spotter<span class="dot">●</span></h1></div>${links}${badge}</header>
     <div class="intro"><div><h2>A little backup goes a long way.</h2><p>Private signals for the person behind the stream.</p></div><span id="connection" class="connection">Connecting…</span></div>
-    <div class="demo-controls"><a id="twitch-connect" href="/api/twitch/connect" hidden>Connect with Twitch ↗</a> <button id="reset" hidden>Replay simulated session</button></div><p id="error" role="status" hidden></p><div id="combined" class="alert" role="alert" hidden>Low energy + high exposure. Consider moving or taking a break.</div>
+    <div class="demo-controls"><a id="twitch-connect" href="/api/twitch/connect" hidden>Connect with Twitch ↗</a> <button id="reset" hidden>Replay simulated session</button></div><div id="rally-alert" class="alert" role="status" hidden>Rally! Your community is here for you. Consider a quick reset.</div><p id="error" role="status" hidden></p><div id="combined" class="alert" role="alert" hidden>Low energy + high exposure. Consider moving or taking a break.</div>
     <section class="grid">
       <article class="card"><span class="eyebrow">01 / OFF THE MAP</span><h2>Know what’s showing.</h2><div class="score"><b id="exposure">—</b><span>/ 100<br>findability</span></div><meter id="exposure-meter" min="0" max="100" value="0"></meter><p id="analysis">analysis unavailable</p><ul id="clues"></ul><button id="dismiss" hidden>Dismiss privacy action</button></article>
       <article class="card"><span class="eyebrow">02 / SECOND WIND</span><h2>Check your reserve.</h2><div class="score"><b id="energy">—</b><span>/ 100<br>personal energy</span></div><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="calibration">Waiting for numeric audio features</p><p id="chat">Chat activity unavailable</p><p id="correlation">Correlation needs paired stream samples.</p><button id="recalibrate" hidden>Recalibrate personal baseline</button></article>
-      <article class="card crew"><span class="eyebrow">03 / TAG OUT</span><h2>Your crew has you.</h2><div class="avatar">↗</div><h3 id="partner">No crew connected</h3><p id="raid-phase">idle</p><div class="actions"><button id="approve" hidden>Approve simulated raid</button><button id="cancel" hidden>Cancel raid</button><button id="back" hidden>Request tag back</button></div><p class="muted">Every raid needs a click from its broadcaster.</p></article>
+      <article class="card crew"><span class="eyebrow">03 / TAG OUT</span><h2>Your crew has you.</h2><div class="avatar">↗</div><h3 id="partner">No crew connected</h3><p id="raid-phase">idle</p><p id="relay-status" class="muted"></p><div class="actions"><button id="approve" hidden>Approve simulated raid</button><button id="cancel" hidden>Cancel raid</button><button id="back" hidden>Request tag back</button></div><p class="muted">Every raid needs a click from its broadcaster.</p></article>
     </section>
-    <section id="scene-panel" class="card" hidden><span class="eyebrow">SYNTHETIC SCENE / MOCK VISION · SIMULATED</span><img id="scene" alt="Synthetic street illustration for the mock demo"/><p>Illustrative fixture. Mock clues follow the script; no model interprets these pixels.</p></section><section class="lower"><article class="card"><span class="eyebrow">THIS SESSION</span><h2>Energy meets community.</h2><svg id="curves" viewBox="0 0 600 180" role="img" aria-label="Energy and chat activity over time"><path d="M0 160H600 M0 90H600 M0 20H600" stroke="#334039" fill="none"/></svg><p class="legend"><span>● Energy</span><span>● Chat activity, scaled to session peak</span></p></article>
+    <section id="scene-panel" class="card" hidden><span class="eyebrow">SIMULATED FRAME SOURCE / MOCK VISION</span><img id="scene" alt="Demo frame fixture"/><p>Illustrative fixture. Mock clues follow the script; no model interprets these pixels.</p></section><section class="lower"><article class="card"><span class="eyebrow">THIS SESSION</span><h2>Energy meets community.</h2><svg id="curves" viewBox="0 0 600 180" role="img" aria-label="Energy and chat activity over time"><path d="M0 160H600 M0 90H600 M0 20H600" stroke="#334039" fill="none"/></svg><p class="legend"><span>● Energy</span><span>● Chat activity, scaled to session peak</span></p></article>
       <article class="card"><span class="eyebrow">EXPOSURE REPLAY</span><h2>The clues, without the place.</h2><ol id="timeline"></ol><p id="moderation" class="muted">No moderated messages.</p></article></section>
     <section id="terms-panel" class="card" hidden><span class="eyebrow">PRIVATE CHAT GUARD</span><h2>Blocked terms, without the guesswork.</h2><form id="terms-form"><label>Private sensitive term <input id="term" required minlength="2" maxlength="500" autocomplete="off"></label><button>Add to Twitch blocked terms</button></form><ul id="terms"></ul><p>Terms go to Twitch and are not saved in Spotter. Keep the returned ID to remove a term later.</p></section><footer><label><input type="checkbox" id="hud"> Opt in to the public stamina HUD</label><p>Frames aren’t saved. Audio stays local. No location is ever produced.</p></footer>`;
 } else if (page === 'overlay') {
@@ -88,8 +88,11 @@ function render(state: Snapshot): void {
   text('calibration', state.simulated ? 'Simulated personal baseline · accelerated time' : `Personal baseline: ${Math.round(state.calibration * 100)}% · ${(state as unknown as { sensorStatus: string }).sensorStatus ?? 'sensor unavailable'}`);
   text('chat', `${state.chat.messagesPerMinute} messages/min · ${state.chat.uniqueChattersPerMinute} unique chatters/min`);
   text('correlation', state.correlation === null ? 'Correlation needs paired stream samples.' : `Energy / chat correlation: ${state.correlation.toFixed(2)} · association, not causation`);
-  text('partner', state.crew[0] ? `Crew partner · ${state.crew[0].energy}% energy` : 'No crew connected');
+  const partner = state.crew.find((peer) => peer.id === state.tagout.partnerId) ?? state.crew.toSorted((a, b) => b.energy - a.energy)[0];
+  text('partner', partner ? `${state.simulated ? 'Crew partner' : partner.id} · ${partner.energy}% energy` : 'No crew connected');
+  text('relay-status', state.simulated ? 'Scripted partner · SIMULATED' : (state as unknown as { status?: string }).status ?? '');
   text('raid-phase', state.tagout.phase === 'raiding' ? state.simulated ? 'Simulated countdown · waiting for raid event' : `${(state as unknown as { countdownSeconds: number }).countdownSeconds}s · waiting for Twitch raid event` : state.tagout.phase);
+  hidden('rally-alert', !state.rally?.celebrating);
   hidden('combined', !state.combinedAlert); hidden('dismiss', !state.exposure.active && !(state as unknown as { privacyActive?: boolean }).privacyActive);
   hidden('approve', !['suggested', 'tag-back'].includes(state.tagout.phase) || (!state.simulated && !(state as unknown as { canApprove: boolean }).canApprove));
   text('approve', state.tagout.phase === 'tag-back' ? state.simulated ? 'Partner: approve simulated tag back' : 'Approve tag back from this channel' : state.simulated ? 'Approve simulated raid' : 'Approve raid from this channel');
@@ -105,8 +108,10 @@ async function refresh(): Promise<void> {
   try {
     const response = await fetch(page === 'overlay' ? '/api/overlay' : '/api/status');
     if (!response.ok) throw new Error('Unavailable');
-    const state = await response.json() as Snapshot & { enabled?: boolean; phase?: string; coveringFor?: string | null };
+    const state = await response.json() as Snapshot & { enabled?: boolean; phase?: string; coveringFor?: string | null; hudEnabled?: boolean };
     isSimulated = state.simulated;
+    const hud = element('hud') as HTMLInputElement | null;
+    if (hud && !busy) hud.checked = state.hudEnabled ?? false;
     hidden('simulated', !state.simulated);
     if (page === 'overlay') {
       hidden('hud-content', !state.enabled); meter('energy-meter', state.energy ?? 0); text('raid-phase', state.coveringFor ? `Covering for ${state.coveringFor}’s community` : state.phase ?? '');
@@ -130,7 +135,7 @@ async function refresh(): Promise<void> {
       }
       hidden('error', true);
     }
-  } catch { text('error', 'analysis unavailable · server disconnected'); hidden('error', false); text('connection', '● Disconnected'); }
+  } catch { if (page === 'overlay') hidden('hud-content', true); text('error', 'analysis unavailable · server disconnected'); hidden('error', false); text('connection', '● Disconnected'); }
 }
 void refresh();
 setInterval(() => { void refresh(); }, 1_000);

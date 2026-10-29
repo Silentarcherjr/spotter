@@ -58,6 +58,7 @@ export class TagOut {
       const fresh = { ...context, sourceLive, crew: this.crew.map((partner) => partner.id === target ? { ...partner, live: targetLive } : partner) };
       const result = transitionTagOut(this.state, { type: 'approve' }, fresh);
       this.state = result.state;
+      if (!result.actions.length) this.status = 'Raid unavailable: check live channels, energy, token ownership and rate limit';
       for (const action of result.actions) {
         if (action.type !== 'start_raid') continue;
         this.db.prepare('INSERT INTO raid_attempts(broadcaster_id,at,kind) VALUES(?,?,?)').run(context.broadcasterId, now, 'start');

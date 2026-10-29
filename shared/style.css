@@ -39,3 +39,7 @@ body[data-page="overlay"] #hud-content p { font-size: .85rem; }
 .demo-controls { margin-bottom: 1rem; }
 #scene-panel { margin-top: 1.25rem; }
 #scene { width: 100%; max-height: 200px; object-fit: cover; border-radius: .4rem; margin-top: 1rem; }
+
+body[data-page="overlay"] main:has(#hud-content[hidden]):not(:has(.badge:not([hidden]))) { display: none; }
+input:not([type="checkbox"]) { font: inherit; padding: .5rem; margin: .5rem; max-width: 100%; }
+#terms-panel { margin-top: 1.25rem; }

@@ -22,7 +22,7 @@ const obs = process.env.OBS_WEBSOCKET_PASSWORD ? {
 } : undefined;
 const ai = process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL ? { key: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL } : undefined;
 const crew = process.env.CREW_FILE ? parseCrewConfig(JSON.parse(await readFile(process.env.CREW_FILE, 'utf8')) as unknown) : [];
-const app = createApp({ databasePath, simulated: process.env.SIM === '1', ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), crew, ...(process.env.CREW_SHARED_SECRET ? { crewToken: process.env.CREW_SHARED_SECRET } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
+const app = createApp({ databasePath, simulated: process.env.SIM === '1', ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), crew, exposureThresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) }, ...(process.env.CREW_SHARED_SECRET ? { crewToken: process.env.CREW_SHARED_SECRET } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => { void app.close(); });
 }

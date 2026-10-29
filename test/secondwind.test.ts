@@ -69,12 +69,13 @@ test('WebSocket accepts one numeric packet and closes raw-audio packets', async 
   const app = createApp({ databasePath: ':memory:', simulated: false });
   await app.ready();
   try {
-    const socket = await app.injectWS('/api/sensor');
+    await assert.rejects(app.injectWS('/api/sensor', { headers: { host: '127.0.0.1:3210', origin: 'https://foreign.example' } }));
+    const socket = await app.injectWS('/api/sensor', { headers: { host: '127.0.0.1:3210' } });
     const accepted = once(socket, 'message');
     socket.send(JSON.stringify(features(Date.now())));
     assert.match(String((await accepted)[0]), /accepted/);
     socket.terminate();
-    const raw = await app.injectWS('/api/sensor');
+    const raw = await app.injectWS('/api/sensor', { headers: { host: '127.0.0.1:3210' } });
     const closed = once(raw, 'close');
     raw.send(JSON.stringify({ audio: [1, 2, 3] }));
     assert.equal((await closed)[0], 1008);

@@ -20,7 +20,7 @@ import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string }) {
+export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; exposureThresholds?: { warn: number; act: number } }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
@@ -55,7 +55,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     const id = twitch?.auth.identity?.userId;
     if (twitch && id) return twitch.helix.marker(id);
     throw new Error('Twitch unavailable');
-  } }) : null;
+  } }, options.exposureThresholds) : null;
   const guard = ai && twitch ? new ChatGuard(database, { classify: (message) => ai.classifyChat(message), remove: async (id) => {
     const user = twitch.auth.identity?.userId;
     if (!user) throw new Error('Twitch authorization required');
@@ -93,6 +93,9 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   app.addHook('onClose', async () => { closing = true; clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
+    let hostname = '';
+    try { hostname = new URL(`http://${request.headers.host ?? ''}`).hostname; } catch { /* Reject invalid Host. */ }
+    if (!['127.0.0.1', 'localhost', '[::1]'].includes(hostname)) return reply.code(403).send({ error: 'Local requests only' });
     if ((!['GET', 'HEAD'].includes(request.method) || request.url === '/api/sensor') && request.headers.origin) {
       const allowed = [`http://127.0.0.1:${process.env.VITE_PORT ?? 5173}`, `http://127.0.0.1:${process.env.PORT ?? 3210}`];
       if (!allowed.includes(request.headers.origin)) return reply.code(403).send({ error: 'Invalid origin' });
@@ -159,7 +162,8 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   });
   app.post('/api/twitch/disconnect', async () => { twitch?.disconnect(); return { connected: false }; });
   app.get('/api/health', async () => ({ status: 'ok', simulated: options.simulated }));
-  app.get('/api/status', async () => demo ? demo.snapshot() : ({
+  app.get('/api/status', async () => demo ? { ...demo.snapshot(), hudEnabled } : ({
+    hudEnabled,
     analysis: 'analysis unavailable',
     exposure: { score: 0, active: false, dismissed: false, analysis: 'analysis unavailable' },
     crew: [], tagout: initialTagOut(), timeline: [], clues: [],
