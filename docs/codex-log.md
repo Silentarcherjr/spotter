@@ -36,3 +36,13 @@
 - Browser QA: observed SIMULATED badge, approved raid → covered → request tag back → second approval → home; enabled HUD and verified the overlay exposes only energy/relay phase. Screenshot saved to /private/tmp/spotter-demo-dashboard.png.
 - Bugs found: an unnecessary CSS data import broke Vite. Expanded the startup regression to fetch both compiled CSS and TS assets, observed failure, then removed the import.
 - Verification: 19 tests pass; typecheck, lint and production build pass. Existing image fixtures are read into memory, never captured/stored by the model path. Real demo media, real Twitch/OBS/AI and live microphone remain pending.
+
+## 2026-10-29 — Phase 3 Twitch implementation, human proof pending
+
+- Consulted official dev.twitch.tv OAuth/refresh/validation, EventSub subscription/WebSocket and Helix reference pages before new endpoints.
+- Implemented server-side authorization-code OAuth with expiring single-use state, local SQLite token storage, single-flight refresh, startup/hourly validation and a Connect with Twitch route. No Twitch credentials exist in this checkout; no real authorization occurred.
+- Implemented plain-fetch Helix adapters (chat, markers, blocked terms, single-message delete, users/streams and raids). Missing message IDs throw rather than clearing all chat; no automatic write retry after errors.
+- Implemented native WebSocket EventSub with five subscriptions, immediate parallel subscription requests, keepalive timeout, retry backoff, bounded dedupe, migration without duplicate subscriptions, revocation status and reconnect URL validation.
+- Added live runtime that retains chat activity IDs only and shows aggregate velocity. Initialized private file permissions for server data. Live action UI is deferred to the module phases.
+- Tests: OAuth state/refresh; Helix methods/query/body/error hygiene; EventSub subscription/deduplication/migration/keepalive; activity reduction without raw text. Fixtures are documentation-shaped synthetic values; Twitch CLI is not installed, so CLI-generated fixtures and real-channel proof remain HUMAN steps.
+- User approved obs-websocket-js, pitchy and @fastify/websocket for upcoming module work; installed these dependencies now.

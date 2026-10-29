@@ -23,3 +23,13 @@ Twitch, OBS, real AI calls and the microphone sensor are not connected yet. No r
 Spotter never outputs a location, never saves vision frames and keeps raw audio local. Measurements are private unless explicitly enabled on the overlay. A low findability score means “no obvious clues detected”; it is not a safety guarantee. Simulated inputs must display `SIMULATED`.
 
 See [brief](BRIEF.md), [build plan](PLAN.md), [Codex work log](docs/codex-log.md) and [session ID](docs/CODEX_SESSION.md).
+
+## Twitch (live verification pending)
+
+Register a Twitch application with the exact redirect URI `http://localhost:3210/api/twitch/callback`. Set `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` and optionally `TWITCH_REDIRECT_URI` in `.env`. Start `npm run dev` and click **Connect with Twitch**. The server stores tokens in the ignored local SQLite database, validates them on startup/hourly and refreshes them server-side. Server-created data uses owner-only file permissions. Keep `.env` private as well.
+
+The dashboard can receive live chat activity via native WebSocket EventSub. Helix adapters for chat, markers, blocked terms, single-message deletion and raid start/cancel are implemented, but no UI invokes these live actions yet. `SIM=1` disables Twitch entirely.
+
+Offline Twitch tests use hand-written shapes based on the official documentation, not Twitch CLI captures. The CLI is not installed here. The human verification checklist still requires installing it, collecting `twitch event trigger` / `twitch mock-api` fixtures, and proving chat on a live test channel. Never put real tokens or sensitive chat text in fixtures.
+
+Implementation references: [OAuth](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/), [EventSub WebSocket](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/), [subscriptions](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/), [Helix](https://dev.twitch.tv/docs/api/reference/).

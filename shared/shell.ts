@@ -10,7 +10,7 @@ const links = '<nav><a href="/dashboard/">Dashboard</a><a href="/sensor/">Sensor
 if (page === 'dashboard') {
   app.innerHTML = `<header><div><span class="eyebrow">YOUR STREAM. YOUR BACKUP.</span><h1>Spotter<span class="dot">●</span></h1></div>${links}${badge}</header>
     <div class="intro"><div><h2>A little backup goes a long way.</h2><p>Private signals for the person behind the stream.</p></div><span id="connection" class="connection">Connecting…</span></div>
-    <div class="demo-controls"><button id="reset" hidden>Replay simulated session</button></div><p id="error" role="status" hidden></p><div id="combined" class="alert" role="alert" hidden>Low energy + high exposure. Consider moving or taking a break.</div>
+    <div class="demo-controls"><a id="twitch-connect" href="/api/twitch/connect" hidden>Connect with Twitch ↗</a> <button id="reset" hidden>Replay simulated session</button></div><p id="error" role="status" hidden></p><div id="combined" class="alert" role="alert" hidden>Low energy + high exposure. Consider moving or taking a break.</div>
     <section class="grid">
       <article class="card"><span class="eyebrow">01 / OFF THE MAP</span><h2>Know what’s showing.</h2><div class="score"><b id="exposure">—</b><span>/ 100<br>findability</span></div><meter id="exposure-meter" min="0" max="100" value="0"></meter><p id="analysis">analysis unavailable</p><ul id="clues"></ul><button id="dismiss" hidden>Dismiss privacy action</button></article>
       <article class="card"><span class="eyebrow">02 / SECOND WIND</span><h2>Check your reserve.</h2><div class="score"><b id="energy">—</b><span>/ 100<br>personal energy</span></div><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="calibration">Waiting for numeric audio features</p><p id="chat">Chat activity unavailable</p><p id="correlation">Correlation needs paired stream samples.</p></article>
@@ -89,6 +89,12 @@ async function refresh(): Promise<void> {
       hidden('hud-content', !state.enabled); meter('energy-meter', state.energy ?? 0); text('raid-phase', state.phase ?? '');
     } else {
       text('connection', state.simulated ? '● Demo session · accelerated time' : '● Local session · integrations disconnected');
+      hidden('twitch-connect', state.simulated);
+      if (!state.simulated && page === 'dashboard') {
+        const live = state as unknown as { twitch: { connected: boolean; status: string }; chat: { messagesPerMinute: number; uniqueChattersPerMinute: number } };
+        text('connection', `● Twitch: ${live.twitch.status}`);
+        text('chat', live.twitch.connected ? `${live.chat.messagesPerMinute} messages/min · ${live.chat.uniqueChattersPerMinute} unique chatters/min` : 'Chat activity unavailable');
+      }
       if (state.simulated && page === 'dashboard') {
         render(state);
         const scene = element('scene') as HTMLImageElement | null;

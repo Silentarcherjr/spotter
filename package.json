@@ -15,7 +15,10 @@
     "build": "vite build"
   },
   "dependencies": {
-    "fastify": "^5.12.7"
+    "@fastify/websocket": "^11.3.4",
+    "fastify": "^5.12.7",
+    "obs-websocket-js": "^5.0.8",
+    "pitchy": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
