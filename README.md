@@ -80,6 +80,18 @@ SIM=1 npm run calibrate -- --mock --video "/absolute/path/to/clip.mp4" --max-fra
 
 That output is labelled SIMULATED · MOCK VISION. The integration test generates an owned silent synthetic video, extracts JPEGs in memory and verifies that only video input plus JSON/CSV/HTML reports exist afterward. A real local-video calibration has also completed through OpenRouter; its reports and analysis remain private under ignored `data/`. This verifies recorded-image analysis, while live OBS actions still need a separate recording.
 
+### Recorded-video width comparison (2026-10-29)
+
+With explicit approval, the same three source timestamps (0, 2, 4 seconds) were analyzed at 768px and compared with the existing 1280px probe. Both runs used `openai/gpt-4.1-mini`, `high` detail, a 15000ms timeout, identical thresholds and a fresh score history; both returned 3/3 available samples. Scores include prior samples, rather than independent frame ratings.
+
+| Time | 1280px probe: score / categories | 768px probe: score / categories |
+| --- | --- | --- |
+| 0s | 62 / storefront, other | 41 / storefront, street_sign, other |
+| 2s | 59 / storefront | 40 / storefront |
+| 4s | 83 / storefront, house_number | 62 / street_sign, storefront, house_number |
+
+**Keep 1280px as the default and provisional warning/action thresholds of 60/80.** At 768px, the warning moved from 0s to 4s and no sample reached 80; the building-number observation at 4s had lower severity/confidence (1/0.7 versus 3/0.8). The extra `street_sign` category is a model label, not independently verified evidence. This small comparison supports retaining image detail, but does not establish that width alone caused the difference: the existing 1280px full run already varied from the probe (scores 62/60/73 at the same times). It does not justify lowering thresholds to compensate. No 768px full run or live OBS action was performed. Detailed reports remain in ignored `data/`; extracted images were never saved.
+
 ## Twitch
 
 Register an app with the exact redirect URI `http://localhost:3210/api/twitch/callback`. Set `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` and `TWITCH_REDIRECT_URI` in `.env`, start `npm run dev` and click **Connect with Twitch**. OAuth uses expiring, single-use state. Tokens remain in the ignored local SQLite database, are validated at startup/hourly and refreshed server-side. Server-created data uses owner-only permissions; protect `.env` too.
