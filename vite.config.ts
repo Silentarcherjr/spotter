@@ -8,7 +8,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: { dashboard: 'dashboard/index.html', report: 'dashboard/report.html', overlay: 'overlay/index.html', sensor: 'sensor/index.html' },
+      input: { dashboard: 'dashboard/index.html', report: 'dashboard/report.html', overlay: 'overlay/index.html', sensor: 'sensor/index.html', privacy: 'privacy/index.html' },
     },
   },
 });

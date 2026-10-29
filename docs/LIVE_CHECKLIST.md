@@ -6,7 +6,7 @@ Offline implementation does not establish the real-service definition of done. D
 
 - [ ] Twitch dev app: client ID/secret and localhost redirect URI configured; main and crew test accounts available.
 - [ ] Twitch CLI installed using the [official instructions](https://dev.twitch.tv/docs/cli/). Produce fixture events with `event trigger` and exercise `mock-api`; sanitize tokens/text before committing captures. Existing automated fixtures are synthetic documentation shapes.
-- [ ] OBS WebSocket enabled with password. Scenes `Main`/`Privacy` and optional source/blur filter configured in `.env`.
+- [x] OBS WebSocket authenticated; `npm run obs:setup` created and read back `Main`/`Privacy`, looped media and 1080p browser sources. A real rerun created no duplicates. `.env` uses scene-switch privacy with no blur filter. Automatic privacy/restore recording below remains pending.
 - [ ] OpenAI key and compatible image/Structured Outputs model set in `.env`.
 - [ ] Owned IRL footage and voice media available; avoid identifiable bystanders.
 - [x] Codex session ID recorded from the current thread environment in CODEX_SESSION.md.

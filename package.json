@@ -13,7 +13,8 @@
     "lint": "node scripts/lint.mjs",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
-    "calibrate": "node --experimental-strip-types --env-file-if-exists=.env scripts/calibrate.ts"
+    "calibrate": "node --experimental-strip-types --env-file-if-exists=.env scripts/calibrate.ts",
+    "obs:setup": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-setup.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

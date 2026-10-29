@@ -7,7 +7,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 // Regression: Node's --watch crashed with EMFILE before the local pages opened.
 test('development command boots all pages and stops both processes', { timeout: 20_000 }, async () => {
   const child = spawn(process.execPath, ['scripts/dev.mjs'], {
-    env: { ...process.env, PORT: '3219', VITE_PORT: '5189', SIM: '0', DATABASE_PATH: ':memory:' },
+    env: { ...process.env, PORT: '3219', VITE_PORT: '5189', SIM: '0', DATABASE_PATH: ':memory:', OPENAI_API_KEY: '', OPENAI_MODEL: '', OBS_WEBSOCKET_PASSWORD: '', TWITCH_CLIENT_ID: '', TWITCH_CLIENT_SECRET: '' },
     stdio: 'pipe',
   });
   let output = '';
@@ -25,7 +25,7 @@ test('development command boots all pages and stops both processes', { timeout: 
       await delay(100);
     }
     assert.ok(ready, output);
-    for (const page of ['dashboard', 'overlay', 'sensor']) {
+    for (const page of ['dashboard', 'overlay', 'sensor', 'privacy']) {
       const response = await fetch(`http://127.0.0.1:5189/${page}/`);
       assert.equal(response.status, 200);
       assert.match(await response.text(), /Spotter/);

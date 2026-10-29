@@ -6,13 +6,13 @@ A local companion with three modules: Off the Map (identifying-clue exposure), S
 
 ## Current status
 
-The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real raids, deletions, OBS actions and microphone capture remain unverified.
+The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real raids, deletions, automatic OBS privacy transitions and microphone capture remain unverified.
 
 | Area | Verified | Still needed |
 | --- | --- | --- |
 | Scaffold/core/demo | Automated tests and browser walkthrough | Real demo media |
 | Twitch | Mocked OAuth/Helix/EventSub tests | Credentials, CLI fixtures, live-channel recording |
-| Off the Map | Vision/fail-soft/OBS tests and real OpenRouter local-video calibration | Real OBS/privacy/moderation take |
+| Off the Map | Vision/fail-soft tests, real OBS scene setup and OpenRouter local-video calibration | Real OBS/privacy/moderation take |
 | Second Wind | Synthetic tone, numeric WebSocket, profiles/reports | Real mic calibration and live-stream proof |
 | Tag Out | Approval, live guards, cancellation, restart/rate-limit tests | Two-channel raid/tag-back recording |
 
@@ -119,6 +119,28 @@ Only the exact `openrouter.ai` host receives `provider: { require_parameters: tr
 
 See [OpenRouter Responses](https://openrouter.ai/docs/api/reference/responses/overview), [provider routing](https://openrouter.ai/docs/guides/routing/provider-selection) and [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs).
 
+## Set up OBS scenes for a recorded clip
+
+Enable OBS's WebSocket server and set `OBS_WEBSOCKET_PASSWORD` in your ignored `.env`. Set `VISION_VIDEO_PATH` to a local video, then run:
+
+```sh
+npm run obs:setup
+npm run dev
+```
+
+The setup authenticates via obs-websocket v5 and verifies its work by reading scenes, scene items and input settings back from OBS. It creates or reuses **Main** and **Privacy** in the current scene collection:
+
+| Scene | Sources, bottom to top |
+| --- | --- |
+| Main | **Spotter IRL** — local media, looping; **Spotter Overlay** — `/overlay/?recorded=1` |
+| Privacy | **Spotter Privacy** — opaque branded `/privacy/`; the same **Spotter Overlay** |
+
+Both browser inputs render at **1920×1080** and fit the current OBS canvas. The media fits without cropping; the privacy browser covers the whole canvas. The recorded-input overlay keeps **SIMULATED** visible even when public stamina/relay is disabled; scores and clues remain private. The page uses local assets and no private API data.
+
+The command updates only `OBS_MAIN_SCENE`, `OBS_PRIVACY_SCENE`, `OBS_SOURCE`, `OBS_OVERLAY_SOURCE`, `OBS_PRIVACY_SOURCE` and `OBS_BLUR_FILTER` in `.env`, preserving credentials. `OBS_SOURCE=Spotter IRL` captures the video directly; `OBS_PRIVACY_SCENE=Privacy` and an empty `OBS_BLUR_FILTER` select scene-switch privacy. Dismissal restores the previously active scene. Main/overlay/privacy source names are fixed by this setup; the extra source-name variables document its targets. Restart an existing `npm run dev` after environment changes. The setup needs OBS open; the browser sources need Vite running on `127.0.0.1` (`VITE_PORT`, default 5173).
+
+Reruns reuse sources/items, repair settings/visibility/transforms/order, and update changed URLs or clip paths without duplicating inputs. Unrelated sources remain; the privacy backdrop covers any existing sources beneath it. Conflicting input types stop with an error. No blur plugin is required. The command does not start streaming/recording, switch the current program scene or send video to AI. Connection/request failures print sanitized diagnostics, never raw credentials; code 4009 means authentication was rejected. API/privacy integration still requires its separate live verification.
+
 ## Off the Map
 
 Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. `VISION_FRAME_WIDTH=1280` controls both video extraction and OBS screenshots (integer 128–4096); `AI_TIMEOUT_MS=15000` controls the AI request timeout (integer 1–120000 milliseconds). Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples JPEGs at `VISION_FRAME_WIDTH` (1280px by default) every four seconds.
@@ -180,7 +202,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**68 automated tests (68 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**74 automated tests (74 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
