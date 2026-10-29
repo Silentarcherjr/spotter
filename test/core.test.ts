@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { scoreFindability, decideExposure, dismissExposure, initialExposure } from '../src/core/exposure.ts';
 import { calibrate, scoreEnergy } from '../src/core/energy.ts';
-import { chatVelocity, correlation, combinedAlert } from '../src/core/chat.ts';
+import { chatVelocity, correlation, advanceCombinedAlert } from '../src/core/chat.ts';
 import { initialTagOut, transitionTagOut, choosePartner } from '../src/core/tagout.ts';
 import type { Clue, AudioFeatures } from '../src/core/types.ts';
 
@@ -74,9 +74,7 @@ test('correlation requires paired nonconstant data and combined alerts require a
   assert.equal(correlation([{ energy: 10, chat: 10 }, { energy: 20, chat: 20 }]), null);
   assert.equal(correlation([{ energy: 10, chat: 10 }, { energy: 20, chat: 20 }, { energy: 30, chat: 30 }]), 1);
   assert.equal(correlation([{ energy: 10, chat: 1 }, { energy: 20, chat: 1 }, { energy: 30, chat: 1 }]), null);
-  assert.equal(combinedAlert(25, 80, true), true);
-  assert.equal(combinedAlert(25, 80, false), false);
-  assert.equal(combinedAlert(null, 80, true), false);
+
 });
 
 const crew = [{ id: 'partner', live: true, energy: 90 }, { id: 'offline', live: false, energy: 100 }];
@@ -160,4 +158,22 @@ test('receiving partner recognizes a configured incoming raid and home recognize
 test('outbound relay revalidates partner energy before accepting approval', () => {
   const suggestion = suggested();
   assert.deepEqual(step(suggestion, { type: 'approve' }, { crew: [{ id: 'partner', live: true, energy: 10 }] }).actions, []);
+});
+
+test('combined alert requires thirty continuous seconds strictly below configurable threshold', () => {
+  const step = (state: ReturnType<typeof advanceCombinedAlert> | null, now: number, energy: number | null, exposure = 80, available = true, threshold = 45) => advanceCombinedAlert(state, { now, energy, exposure, available, threshold });
+  let state = step(null, 1000, 44);
+  assert.equal(state.active, false);
+  for (let now = 2000; now <= 30000; now += 1000) state = step(state, now, 44);
+  assert.equal(state.active, false);
+  state = step(state, 31000, 44); assert.equal(state.active, true);
+  assert.equal(step(state, 32000, 45).active, false);
+  assert.equal(step(state, 32000, 44, 59).active, false);
+  assert.equal(step(state, 32000, 44, 80, false).active, false);
+  assert.equal(step(state, 32000, null).belowSince, null);
+  assert.equal(step(state, 32000, NaN).belowSince, null);
+  assert.equal(step(state, 32000, 44, 80, true, 40).belowSince, null);
+  assert.equal(step(state, 40000, 44).active, false); // Missing samples break continuity.
+  assert.equal(step(state, 0, 44).active, false); // Clock reversal starts a fresh episode.
+  assert.throws(() => step(state, 32000, 44, 80, true, NaN));
 });

@@ -13,4 +13,13 @@ export function correlation(pairs: readonly { energy: number; chat: number }[]):
   const chatVariance = valid.reduce((sum, pair) => sum + (pair.chat - chatMean) ** 2, 0);
   return energyVariance && chatVariance ? covariance / Math.sqrt(energyVariance * chatVariance) : null;
 }
-export const combinedAlert = (energy: number | null, exposure: number | null, available: boolean): boolean => available && energy !== null && exposure !== null && Number.isFinite(energy) && Number.isFinite(exposure) && energy <= 30 && exposure >= 60;
+export interface CombinedAlertState { belowSince: number | null; lastAt: number; active: boolean }
+/** Low energy must be continuous; missing samples (>5s) or recovery restart the hold. */
+export function advanceCombinedAlert(previous: CombinedAlertState | null, input: { now: number; energy: number | null; exposure: number | null; available: boolean; threshold: number }): CombinedAlertState {
+  const { now, energy, exposure, available, threshold } = input;
+  if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) throw new Error('Invalid ENERGY_ALERT_THRESHOLD');
+  const low = Number.isFinite(now) && energy !== null && Number.isFinite(energy) && energy >= 0 && energy < threshold;
+  const continuous = previous && now >= previous.lastAt && now - previous.lastAt <= 5000;
+  const belowSince = low ? (continuous ? previous.belowSince ?? now : now) : null;
+  return { belowSince, lastAt: now, active: belowSince !== null && now - belowSince >= 30_000 && available && exposure !== null && Number.isFinite(exposure) && exposure >= 60 };
+}

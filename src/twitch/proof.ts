@@ -60,3 +60,23 @@ export async function readMarkerProof(config: TwitchConfig, databasePath: string
     return result.data.flatMap((entry) => entry.videos.flatMap((video) => video.markers.filter((marker) => marker.description === 'Spotter privacy alert').map((marker) => ({ id: marker.id, createdAt: marker.created_at, positionSeconds: marker.position_seconds }))));
   } finally { db.close(); }
 }
+
+/** Three user-authorized, harmless self-channel messages; never synthetic counters. */
+export async function sendSecondWindChat(config: TwitchConfig, databasePath: string) {
+  const db = new DatabaseSync(databasePath);
+  try {
+    const auth = new TwitchAuth(db, config);
+    if (!auth.identity) throw new Error('Twitch authorization required');
+    const id = auth.identity.userId;
+    const helix = new Helix(config.clientId, () => auth.accessToken(), config.fetcher);
+    const receipts: { at: number; id: string }[] = [];
+    for (let index = 1; index <= 3; index++) {
+      const result = await helix.sendChat(id, id, `Spotter Second Wind test ${index}/3`) as { data: { is_sent: boolean; message_id: string }[] };
+      if (!result.data[0]?.is_sent) throw new Error('Controlled chat message not accepted');
+      receipts.push({ at: Date.now(), id: result.data[0].message_id });
+      console.log(JSON.stringify({ message: index, sent: true }));
+      if (index < 3) await new Promise((resolve) => setTimeout(resolve, 20000));
+    }
+    return receipts;
+  } finally { db.close(); }
+}

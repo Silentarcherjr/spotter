@@ -49,3 +49,42 @@ export async function showObsMain(url: string, password: string) {
   try { await wire.connect(url, password); await wire.call('SetCurrentProgramScene', { sceneName: 'Main' }); }
   finally { await wire.disconnect().catch(() => {}); }
 }
+
+export async function readObsHud(url: string, password: string): Promise<string> {
+  const wire = new OBSWebSocket();
+  try {
+    await wire.connect(url, password);
+    return (await wire.call('GetSourceScreenshot', { sourceName: 'Spotter Overlay', imageFormat: 'png', imageWidth: 1280 })).imageData;
+  } finally { await wire.disconnect().catch(() => {}); }
+}
+
+export async function refreshObsHud(url: string, password: string): Promise<void> {
+  const wire = new OBSWebSocket();
+  try { await wire.connect(url, password); await wire.call('PressInputPropertiesButton', { inputName: 'Spotter Overlay', propertyName: 'refreshnocache' }); }
+  finally { await wire.disconnect().catch(() => {}); }
+}
+
+export async function readHudState(url: string, password: string) {
+  const wire = new OBSWebSocket();
+  try {
+    await wire.connect(url, password);
+    const { inputSettings } = await wire.call('GetInputSettings', { inputName: 'Spotter Overlay' });
+    const active = await wire.call('GetSourceActive', { sourceName: 'Spotter Overlay' });
+    let expectedLocalUrl = false;
+    try { const parsed = new URL(String(inputSettings.url)); expectedLocalUrl = parsed.origin === 'http://127.0.0.1:5173' && parsed.pathname === '/overlay/'; } catch { /* Do not log arbitrary source URLs. */ }
+    const main = await wire.call('GetSceneItemList', { sceneName: 'Main' });
+    const privacy = await wire.call('GetSceneItemList', { sceneName: 'Privacy' });
+    return { expectedLocalUrl, localFileMode: inputSettings.is_local_file ?? false, customCssPresent: typeof inputSettings.css === 'string' && inputSettings.css.length > 0, width: inputSettings.width, height: inputSettings.height, shutdown: inputSettings.shutdown, active,
+      mainOverlayEnabled: main.sceneItems.find((item) => item.sourceName === 'Spotter Overlay')?.sceneItemEnabled,
+      privacyOverlayEnabled: privacy.sceneItems.find((item) => item.sourceName === 'Spotter Overlay')?.sceneItemEnabled };
+  } finally { await wire.disconnect().catch(() => {}); }
+}
+
+/** Force a fresh local navigation; only the public browser source is changed. */
+export async function repairObsHud(url: string, password: string): Promise<void> {
+  const wire = new OBSWebSocket();
+  try {
+    await wire.connect(url, password);
+    await wire.call('SetInputSettings', { inputName: 'Spotter Overlay', inputSettings: { is_local_file: false, url: `http://127.0.0.1:5173/overlay/?recorded=1&refresh=${Date.now()}`, width: 1920, height: 1080, css: 'body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }', shutdown: false }, overlay: true });
+  } finally { await wire.disconnect().catch(() => {}); }
+}

@@ -14,7 +14,9 @@ export function parseNumericFeatures(value: unknown, now: number): AudioFeatures
   if (!validAudio(sample) || Object.values(sample).some((item) => typeof item !== 'number') || Math.abs(sample.at - now) > 5_000 || sample.pitchMedian > 2000 || sample.pitchRange > 2000 || Math.abs(sample.spectralSlope) > 200 || sample.speechRate > 20 || sample.pauseLength > 3600) throw new Error('Invalid numeric features');
   return { ...sample, at: now };
 }
+export type AudioSource = 'microphone' | 'file';
 export class SecondWind {
+  private source: AudioSource = 'microphone';
   private db: DatabaseSync;
   private session = randomUUID();
   private baseline: Baseline | null = null;
@@ -25,7 +27,12 @@ export class SecondWind {
   constructor(db: DatabaseSync) {
     this.db = db;
     db.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY,value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS session_points (session TEXT NOT NULL,at INTEGER NOT NULL,energy REAL NOT NULL,chat REAL NOT NULL,PRIMARY KEY(session,at))');
-    const saved = db.prepare("SELECT value FROM settings WHERE key='audio_baseline'").get() as { value: string } | undefined;
+    this.loadBaseline();
+  }
+  private baselineKey(): string { return this.source === 'file' ? 'audio_baseline_file' : 'audio_baseline'; }
+  private loadBaseline(): void {
+    this.baseline = null;
+    const saved = this.db.prepare('SELECT value FROM settings WHERE key=?').get(this.baselineKey()) as { value: string } | undefined;
     if (saved) {
       try {
         const baseline = JSON.parse(saved.value) as Baseline;
@@ -33,12 +40,19 @@ export class SecondWind {
       } catch { /* A malformed profile requires fresh calibration. */ }
     }
   }
+  selectSource(source: AudioSource): void {
+    if (source === this.source) return;
+    this.source = source; this.session = randomUUID(); this.audio = []; this.lastPoint = null; this.loadBaseline();
+  }
   receive(sample: AudioFeatures): void {
     if (!validAudio(sample)) return;
-    this.audio = [...this.audio.filter((previous) => sample.at - previous.at <= 600_000), sample].slice(-605);
+    // Keep a grace period while calibrating: trimming at exactly ten minutes can
+    // prevent jittered real packets from ever spanning the full baseline window.
+    const retention = this.baseline ? 60_000 : 660_000;
+    this.audio = [...this.audio.filter((previous) => sample.at - previous.at <= retention), sample].slice(-1000);
     if (!this.baseline) {
       this.baseline = calibrate(this.audio, sample.at).baseline;
-      if (this.baseline) this.db.prepare("INSERT INTO settings(key,value) VALUES('audio_baseline',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(this.baseline));
+      if (this.baseline) this.db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(this.baselineKey(), JSON.stringify(this.baseline));
     }
     const energy = scoreEnergy(this.audio, this.baseline, sample.at);
     if (energy !== null && (this.lastPoint === null || sample.at - this.lastPoint >= 30_000)) {
@@ -50,13 +64,13 @@ export class SecondWind {
     this.chats = [...this.chats.filter((previous) => at - previous.at <= 60_000), { id, userId, at }].slice(-10_000);
     this.rally = advanceRally(this.rally, id, at);
   }
-  resetCalibration(): void { this.baseline = null; this.audio = []; this.db.prepare("DELETE FROM settings WHERE key='audio_baseline'").run(); }
+  resetCalibration(): void { this.baseline = null; this.audio = []; this.db.prepare('DELETE FROM settings WHERE key=?').run(this.baselineKey()); }
   snapshot(now: number) {
     const latest = this.audio.at(-1)?.at;
     const fresh = latest !== undefined && now >= latest && now - latest <= 5_000;
     const curves = (this.db.prepare('SELECT at,energy,chat FROM session_points WHERE session=? ORDER BY at DESC LIMIT 120').all(this.session) as unknown as CurvePoint[]).reverse();
     return {
-      simulated: false as const, energy: fresh ? scoreEnergy(this.audio, this.baseline, now) : null,
+      simulated: false as const, audioSource: this.source, audioSimulated: this.source === 'file', energy: fresh ? scoreEnergy(this.audio, this.baseline, now) : null,
       calibration: this.baseline ? 1 : calibrate(this.audio, now).progress,
       calibrated: !!this.baseline, sensorStatus: fresh ? 'available' : 'sensor unavailable',
       rally: { meter: this.rally.meter, celebrating: now < this.rally.celebratingUntil }, curves, correlation: correlation(curves),

@@ -85,3 +85,64 @@ test('WebSocket accepts one numeric packet and closes raw-audio packets', async 
     assert.equal(status.energy, null);
   } finally { await app.close(); }
 });
+
+test('file audio uses an isolated simulated baseline without switching real integrations into demo mode', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const module = new SecondWind(db);
+    for (let i = 0; i <= 600; i++) module.receive(features(i * 1000));
+    module.selectSource('file');
+    assert.equal(module.snapshot(600_000).calibrated, false);
+    for (let i = 0; i <= 600; i++) module.receive({ ...features(700_000 + i * 1000), rms: .4 });
+    const file = module.snapshot(1_300_000);
+    assert.equal(file.simulated, false); assert.equal(file.audioSimulated, true); assert.equal(file.audioSource, 'file');
+    assert.equal(file.calibrated, true); assert.equal(file.energy, 75);
+    module.selectSource('microphone');
+    module.receive(features(1_301_000));
+    assert.equal(module.snapshot(1_301_000).audioSimulated, false);
+    assert.equal(module.snapshot(1_301_000).energy, 75);
+    module.selectSource('file');
+    assert.equal(module.snapshot(1_301_000).calibrated, true);
+    module.resetCalibration();
+    module.selectSource('microphone');
+    assert.equal(module.snapshot(1_301_000).calibrated, true);
+  } finally { db.close(); }
+});
+
+test('file sensor accepts only numeric features and marks the public HUD simulated even when disabled', async () => {
+  const { createApp } = await import('../src/app.ts'); const { once } = await import('node:events');
+  const app = createApp({ databasePath: ':memory:', simulated: false });
+  try {
+    await app.ready();
+    await assert.rejects(app.injectWS('/api/sensor?source=unknown', { headers: { host: '127.0.0.1:3210' } }));
+    const socket = await app.injectWS('/api/sensor?source=file', { headers: { host: '127.0.0.1:3210' } });
+    const ack = once(socket, 'message'); socket.send(JSON.stringify(features(Date.now()))); await ack;
+    const status = (await app.inject('/api/status')).json();
+    assert.equal(status.simulated, false); assert.equal(status.audioSimulated, true); assert.equal(status.audioSource, 'file');
+    assert.equal((await app.inject('/api/overlay')).json().simulated, true);
+    await app.inject({ method: 'POST', url: '/api/hud', payload: { enabled: true } });
+    const hud = (await app.inject('/api/overlay')).json(); assert.equal(hud.simulated, true); assert.equal(hud.enabled, true);
+    assert.doesNotMatch(JSON.stringify(hud), /clues|exposure|audio/);
+    socket.terminate();
+  } finally { await app.close(); }
+});
+
+test('calibration completes with normal packet jitter instead of trimming its first sample too early', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const module = new SecondWind(db); module.selectSource('file');
+    for (let i = 0; i <= 610; i++) module.receive(features(i * 1003));
+    assert.equal(module.snapshot(610 * 1003).calibrated, true);
+  } finally { db.close(); }
+});
+
+test('live status publishes the configured energy alert threshold and rejects invalid configuration', async () => {
+  const { createApp } = await import('../src/app.ts');
+  const app = createApp({ databasePath: ':memory:', simulated: false, energyAlertThreshold: 50 });
+  try {
+    const status = (await app.inject('/api/status')).json();
+    assert.equal(status.energyAlertThreshold, 50);
+    assert.equal(status.combinedAlert, false);
+  } finally { await app.close(); }
+  assert.throws(() => createApp({ databasePath: ':memory:', simulated: false, energyAlertThreshold: 101 }));
+});

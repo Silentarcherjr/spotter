@@ -2,7 +2,7 @@ import { mockVision, mockChatClassifier } from '../ai/mock.ts';
 import { clueDescriptions } from '../ai/vision-contract.ts';
 import { decideExposure, dismissExposure, initialExposure, scoreFindability } from '../core/exposure.ts';
 import { calibrate, scoreEnergy } from '../core/energy.ts';
-import { chatVelocity, combinedAlert, correlation } from '../core/chat.ts';
+import { chatVelocity, advanceCombinedAlert, correlation } from '../core/chat.ts';
 import { decideModeration } from '../core/moderation.ts';
 import { initialTagOut, transitionTagOut } from '../core/tagout.ts';
 import type { TagOutEvent } from '../core/tagout.ts';
@@ -12,6 +12,7 @@ import { createSimEvent } from './events.ts';
 import { advanceRally, initialRally } from '../core/session.ts';
 
 export class DemoSession {
+  private energyHold: ReturnType<typeof advanceCombinedAlert> | null = null;
   private step = 0;
   private now = 600_000;
   private exposure = initialExposure();
@@ -28,7 +29,9 @@ export class DemoSession {
   private energy: number | null = 75;
   private rally = initialRally();
   private baseline;
-  constructor(enabled: boolean) {
+  private energyThreshold: number;
+  constructor(enabled: boolean, energyThreshold = 45) {
+    this.energyThreshold = energyThreshold;
     if (!enabled) throw new Error('Simulation requires SIM=1');
     this.crew = simulatedCrew(true);
     this.chats = syntheticChat(true, -1, this.now);
@@ -76,6 +79,8 @@ export class DemoSession {
     this.timeline = [...this.timeline, { at: this.now, score, actions: decision.actions, simulated: true as const }].slice(-120);
     this.curves = [...this.curves, { at: this.now, energy: this.energy ?? 0, chat: chatVelocity(this.chats, this.now).messagesPerMinute }].slice(-120);
     this.moderation = this.moderation.slice(-120);
+    // Each scripted tick represents thirty seconds of continuous simulated input.
+    for (let at = this.now - 29_000; at <= this.now; at += 1000) this.energyHold = advanceCombinedAlert(this.energyHold, { now: at, energy: this.energy, exposure: this.exposure.score, available: this.exposure.analysis === 'available', threshold: this.energyThreshold });
     this.step++;
   }
   approve(): void { this.raid({ type: 'approve' }); }
@@ -91,7 +96,7 @@ export class DemoSession {
       exposure: this.exposure, energy: this.energy, calibration: 1,
       clues: (this.frames.at(-1)?.clues ?? []).map((clue) => ({ ...clue, description: clueDescriptions[clue.category] })),
       chat: chatVelocity(this.chats, this.now), correlation: correlation(this.curves),
-      combinedAlert: combinedAlert(this.energy, this.exposure.score, this.exposure.analysis === 'available'),
+      combinedAlert: this.energyHold?.active ?? false,
       rally: { meter: this.rally.meter, celebrating: this.now < this.rally.celebratingUntil }, crew: [this.crew], tagout: this.tagout, timeline: this.timeline, curves: this.curves,
       moderation: this.moderation, events: this.events,
     });

@@ -14,40 +14,46 @@ import { OffTheMap } from './modules/offthemap/runtime.ts';
 import { ChatGuard } from './modules/offthemap/chat-guard.ts';
 import { initialTagOut } from './core/tagout.ts';
 import { SecondWind, parseNumericFeatures } from './modules/secondwind/runtime.ts';
-import { combinedAlert } from './core/chat.ts';
+import { advanceCombinedAlert } from './core/chat.ts';
+import { parseEnergyAlertThreshold } from './config.ts';
 import { sessionReport } from './core/session.ts';
 import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; exposureThresholds?: { warn: number; act: number } }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
     done();
   } });
+  const energyAlertThreshold = parseEnergyAlertThreshold(options.energyAlertThreshold);
   const database = new DatabaseSync(options.databasePath);
   database.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
   const secondwind = !options.simulated ? new SecondWind(database) : null;
+  let energyHold: ReturnType<typeof advanceCombinedAlert> | null = null;
   let sensorSocket: { close: () => void } | null = null;
   app.register(async (scope) => {
-    scope.get('/api/sensor', { websocket: true }, (socket) => {
+    scope.get<{ Querystring: { source?: string } }>('/api/sensor', { websocket: true, schema: { querystring: { type: 'object', additionalProperties: false, properties: { source: { type: 'string', enum: ['microphone', 'file'] } } } } }, (socket, request) => {
       if (!secondwind) { socket.close(1008, 'Sensor disabled in simulation'); return; }
+      energyHold = null;
       sensorSocket?.close(); sensorSocket = socket;
+      secondwind.selectSource(request.query.source === 'file' ? 'file' : 'microphone');
       let lastPacket = 0;
       socket.on('message', (raw: { toString(): string }, binary: boolean) => {
         try {
           const now = Date.now();
-          if (binary || now - lastPacket < 750) throw new Error('Invalid sensor packet');
+          if (sensorSocket !== socket || binary || now - lastPacket < 750) throw new Error('Invalid sensor packet');
           const packet = parseNumericFeatures(JSON.parse(raw.toString()) as unknown, now);
           secondwind.receive(packet); lastPacket = now;
+          energyHold = advanceCombinedAlert(energyHold, { now, energy: secondwind.snapshot(now).energy, exposure: null, available: false, threshold: energyAlertThreshold });
           socket.send(JSON.stringify({ accepted: true }));
         } catch { socket.close(1008, 'Numeric features only, at one-second intervals'); }
       });
-      socket.on('close', () => { if (sensorSocket === socket) sensorSocket = null; });
+      socket.on('close', () => { if (sensorSocket === socket) { sensorSocket = null; energyHold = null; } });
     });
   });
-  let demo = options.simulated ? new DemoSession(true) : null;
+  let demo = options.simulated ? new DemoSession(true, energyAlertThreshold) : null;
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
   const obs = !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
   const ai = !options.simulated && options.ai ? new ResponsesAI(options.ai) : null;
@@ -102,10 +108,10 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     }
   });
   app.get('/api/overlay', async () => {
-    if (!hudEnabled) return { simulated: options.simulated, enabled: false };
+    if (!hudEnabled) return { simulated: options.simulated || secondwind?.snapshot(Date.now()).audioSimulated === true, enabled: false };
     if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, returning: demo.snapshot().tagout.returning, rally: demo.snapshot().rally, coveringFor: demo.snapshot().tagout.phase === 'covered' ? 'Main streamer' : null };
     const energy = secondwind!.snapshot(Date.now());
-    return { simulated: false, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', returning: tagout?.snapshot(Date.now()).tagout.returning ?? false, coveringFor: tagout?.snapshot(Date.now()).coveringFor ? twitch?.displayName(tagout.snapshot(Date.now()).coveringFor!) : null };
+    return { simulated: energy.audioSimulated, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', returning: tagout?.snapshot(Date.now()).tagout.returning ?? false, coveringFor: tagout?.snapshot(Date.now()).coveringFor ? twitch?.displayName(tagout.snapshot(Date.now()).coveringFor!) : null };
   });
   app.get('/api/crew/status', async (request, reply) => {
     if (!options.crewToken || request.headers.authorization !== `Bearer ${options.crewToken}` || !secondwind) return reply.code(401).send({ error: 'Crew authorization required' });
@@ -117,14 +123,14 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
       await tagout[action](Date.now()); return tagout.snapshot(Date.now());
     });
   }
-  app.post('/api/calibration/reset', async () => { secondwind?.resetCalibration(); return { reset: true }; });
-  app.get('/api/report', async () => ({ simulated: options.simulated, ...(demo ? sessionReport(demo.snapshot().curves) : secondwind!.report()) }));
+  app.post('/api/calibration/reset', async () => { energyHold = null; secondwind?.resetCalibration(); return { reset: true }; });
+  app.get('/api/report', async () => ({ simulated: options.simulated || secondwind?.snapshot(Date.now()).audioSimulated === true, ...(demo ? sessionReport(demo.snapshot().curves) : secondwind!.report()) }));
   app.post<{ Body: { enabled: boolean } }>('/api/hud', {
     schema: { body: { type: 'object', additionalProperties: false, required: ['enabled'], properties: { enabled: { type: 'boolean' } } } },
   }, async (request) => { hudEnabled = request.body.enabled; return { enabled: hudEnabled }; });
   if (demo) {
     app.get('/api/demo/frame', async () => frames[(demo!.snapshot().step - 1) % frames.length]);
-    app.post('/api/demo/reset', async () => { demo = new DemoSession(true); demo.tick(); return demo.snapshot(); });
+    app.post('/api/demo/reset', async () => { demo = new DemoSession(true, energyAlertThreshold); demo.tick(); return demo.snapshot(); });
     for (const action of ['approve', 'cancel', 'requestBack', 'dismiss'] as const) {
       app.post(`/api/demo/${action}`, async () => { demo![action](); return demo!.snapshot(); });
     }
@@ -177,7 +183,8 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     crew: [], tagout: initialTagOut(), timeline: [], clues: [],
     ...(tagout?.snapshot(Date.now()) ?? {}),
     ...secondwind!.snapshot(Date.now()),
-    combinedAlert: combinedAlert(secondwind!.snapshot(Date.now()).energy, offthemap?.snapshot().exposure.score ?? null, offthemap?.snapshot().analysis === 'available'),
+    energyAlertThreshold,
+    combinedAlert: advanceCombinedAlert(energyHold, { now: Date.now(), energy: secondwind!.snapshot(Date.now()).energy, exposure: offthemap?.snapshot().exposure.score ?? null, available: offthemap?.snapshot().analysis === 'available', threshold: energyAlertThreshold }).active,
     ...(offthemap?.snapshot() ?? {}),
     moderation: guard?.snapshot().entries ?? [],
     chatGuard: guard?.snapshot().status ?? 'analysis unavailable',

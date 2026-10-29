@@ -13,7 +13,7 @@ The private repository contains the scaffold, pure core, key-free scripted demo 
 | Scaffold/core/demo | Automated tests and browser walkthrough | Real demo media |
 | Twitch | Real OAuth/chat rate, blocked-term hold/removal, audited test deletion and CLI/live fixtures | Real raid and submission recording |
 | Off the Map | Real OBS/vision → privacy/marker → restore; WebSocket disconnect survival; private dashboard take | Full-motion submission edit; full OBS-process shutdown proof |
-| Second Wind | Synthetic tone, numeric WebSocket, profiles/reports | Real mic calibration and live-stream proof |
+| Second Wind | Shared mic/file extractor, 11-minute TTS baseline, measured energy/chat and real OBS HUD | Natural microphone and sustained combined-alert crossing |
 | Tag Out | Approval, live guards, cancellation, restart/rate-limit tests | Two-channel raid/tag-back recording |
 
 ## Run locally
@@ -165,6 +165,29 @@ Chat Guard runs when Twitch and AI are configured. Pure core logic decides high-
 
 Open the sensor and click **Enable local microphone**. Web Audio requests echo cancellation, noise suppression and automatic gain control off. `pitchy` clarity-gates F0. RMS, pitch median/range, spectral slope, voiced ratio, pause length and a rough envelope-peak speech-rate proxy are calculated in-browser. Only a closed object of numeric features leaves at approximately one-second intervals. Binary packets, extra fields, stale values and excessive rates are rejected.
 
+The sensor also accepts a **local audio file**, marked **SIMULATED**, in normal `npm run dev` mode. Choose it on `/sensor/` and click **Play file**; no virtual microphone is needed. Web Audio decodes the file in browser memory, connects it to the same analyser and `NumericAudioPipeline` / `FeatureWindow` used by the microphone, and sends the identical closed numeric packet once per second. Neither file bytes nor PCM are uploaded. Optional **Hear file locally** monitors playback after the analyser without changing its measurements; monitoring is off by default. Stop/EOF/disconnection closes the audio context and socket.
+
+The WebSocket handshake declares `source=file` or `source=microphone`; unknown sources are rejected. File input has its own stored numeric baseline (`audio_baseline_file`) and source-labelled session. Switching sources does not mix baselines or curves; recalibration resets only the selected baseline. The dashboard, report and public HUD show SIMULATED for file audio while Twitch/OBS continue their real integrations. This source flag does not switch the whole app into the scripted `SIM=1` mode.
+
+For TTS, calibrate with at least ten minutes of reference audio (allow more than 601 seconds so the first/last feature windows span ten full minutes). For a shorter reference, loop a copy; the current private test uses an 11-minute `calibracion-loop.wav` derived from the 7:25 original. Keep the sensor visible during playback. Sparse/throttled samples cannot silently complete calibration. A grace period in the numeric calibration buffer accommodates ordinary packet jitter without shortening the pure ten-minute baseline requirement.
+
+Then select the demo file and replay it against that same baseline. Energy averages the last **45 seconds**; a short ending may still be mixed with earlier energetic speech. If needed, repeat only the last 30 seconds in a derived file, preserving the original beginning, and compare measured scores. TTS/progressively modified audio demonstrates the energy signal; it does not validate fatigue detection. Correlation with controlled real Twitch test messages is association, not evidence of organic audience retention or causation. All source audio, derived WAVs and private numeric comparison reports remain in ignored `data/`.
+
+The private TTS comparison on 2026-10-29 used the same saved baseline and real-time browser extractor:
+
+| Input | Duration | First 20s median | Last 15s median | Minimum |
+|---|---:|---:|---:|---:|
+| Original demo | 81.48s | 74 | 56 | 55 |
+| Original + last 30s repeated twice | 141.48s | 74 | 56 | 55 |
+
+The extended file preserves the entire original PCM prefix byte for byte. Repeating the ending confirmed a plateau rather than a stronger decline. Three authorized test messages travelled through real Twitch Helix/EventSub; the original run's paired correlation was approximately −0.864 because chat increased while energy fell. This controlled association is not an audience-retention result. No additional chat messages were sent in the replay.
+
+`ENERGY_ALERT_THRESHOLD=45` configures the **combined alert only**, leaving the energy formula, 45-second averaging, HUD colours and raid suggestion policy unchanged. Energy must remain **strictly below** the threshold for at least **30 seconds**; recovery to the threshold, missing sensor data, source reconnection or recalibration restarts the hold. The alert also requires available vision and exposure ≥60. Configure an integer from 1 to 100 in `.env`; restart the server to apply it. The default is a personal **heuristic, not clinical**.
+
+The choice of 45 is provisional: calibration places the reference near 75 and yields a **theoretical lower score of about 42**, making the former ≤30 alert unreachable with this baseline. **42 was a mathematical bound, not a measured tired-voice score.** Both actual audio endings measured about 55–56, so they do not establish that 45 is a useful operating threshold and do not demonstrate the sustained combined alert. That live crossing remains unverified; tests cover the decision rule without altering real measurements.
+
+If the OBS browser source is blank, verify `http://127.0.0.1:5173/overlay/?recorded=1`, 1920×1080, URL mode, transparent standard CSS, source visibility and dashboard **Public stamina HUD** opt-in. On this machine the source remained transparent even after a fresh URL and a new diagnostic browser source; OBS made no HTTP requests. Restarting OBS **after confirming streaming and recording were both stopped** restored its browser engine and the real HUD. Do not restart OBS during an active output. The opt-in resets when Spotter restarts.
+
 Stop, page close or server disconnection releases microphone tracks. Keep the sensor page active: browsers may throttle background tabs; too few analysis frames produce no measurement. Sensor data older than five seconds is unavailable. Nothing records or uploads raw audio.
 
 Calibration needs a ten-minute span and at least 300 usable windows. A numeric-only baseline profile is saved locally and can be recalibrated. Energy uses smoothed z-scores against that profile. Rally is separate: chat fills its meter and triggers a celebration/nudge without changing the measurement. **Public stamina/rally requires explicit HUD opt-in**; the opt-in resets on server restart.
@@ -212,7 +235,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**82 automated tests (82 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**89 automated tests (89 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

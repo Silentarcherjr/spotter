@@ -5,3 +5,4 @@ function integerSetting(value: string | number | undefined, fallback: number, mi
 }
 export const parseVisionFrameWidth = (value?: string | number): number => integerSetting(value, 1280, 128, 4096, 'VISION_FRAME_WIDTH');
 export const parseAiTimeoutMs = (value?: string | number): number => integerSetting(value, 15_000, 1, 120_000, 'AI_TIMEOUT_MS');
+export const parseEnergyAlertThreshold = (value?: string | number): number => integerSetting(value, 45, 1, 100, 'ENERGY_ALERT_THRESHOLD');
