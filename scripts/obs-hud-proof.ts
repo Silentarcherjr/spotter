@@ -5,7 +5,7 @@ try {
   if (process.argv.includes('--repair')) { await repairObsHud(process.env.OBS_WEBSOCKET_URL ?? 'ws://127.0.0.1:4455', process.env.OBS_WEBSOCKET_PASSWORD ?? ''); console.log('Public OBS HUD local URL and browser settings reapplied.'); process.exit(0); }
   if (process.argv.includes('--state')) { console.log(JSON.stringify(await readHudState(process.env.OBS_WEBSOCKET_URL ?? 'ws://127.0.0.1:4455', process.env.OBS_WEBSOCKET_PASSWORD ?? ''))); process.exit(0); }
   if (process.argv.includes('--refresh-only')) { await refreshObsHud(process.env.OBS_WEBSOCKET_URL ?? 'ws://127.0.0.1:4455', process.env.OBS_WEBSOCKET_PASSWORD ?? ''); console.log('OBS overlay browser refreshed.'); process.exit(0); }
-  const image = await readObsHud(process.env.OBS_WEBSOCKET_URL ?? 'ws://127.0.0.1:4455', process.env.OBS_WEBSOCKET_PASSWORD ?? '');
+  const image = await readObsHud(process.env.OBS_WEBSOCKET_URL ?? 'ws://127.0.0.1:4455', process.env.OBS_WEBSOCKET_PASSWORD ?? '', process.argv.includes('--bridge') ? 'Spotter Relay HUD Bridge' : 'Spotter Overlay');
   if (!image.startsWith('data:image/png;base64,')) throw new Error('Invalid HUD image');
   const output = process.argv[2] ?? 'data/takes/secondwind/obs-hud.png';
   await mkdir(dirname(output), { recursive: true, mode: 0o700 });

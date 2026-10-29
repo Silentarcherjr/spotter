@@ -31,7 +31,7 @@ export async function twitchProof(config: TwitchConfig, databasePath: string, ca
     const helix = new Helix(config.clientId, () => auth.accessToken(), config.fetcher);
     const user = (await helix.users(id)).data[0];
     if (!user || user.id !== id) throw new Error('Twitch identity unavailable');
-    if (!capture) return { login: user.login, displayName: user.display_name, scopes: auth.identity!.scopes };
+    if (!capture) return { login: user.login, displayName: user.display_name, createdAt: user.created_at ?? null, scopes: auth.identity!.scopes };
     return await new Promise<{ event: unknown; type: string }>((resolve, reject) => {
       const timer = setTimeout(() => { client?.stop(); reject(new Error('Twitch controlled-chat capture timed out')); }, 90_000);
       client = new EventSubClient({

@@ -12,10 +12,23 @@ export class Helix {
       method, headers: { Authorization: `Bearer ${await this.accessToken()}`, 'Client-Id': this.clientId, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) throw new Error(`Twitch request unavailable (${response.status})`);
+    if (!response.ok) {
+      let reason: string | null = null;
+      if (path === 'raids') {
+        try {
+          const value = await response.json() as { message?: unknown };
+          if (typeof value.message === 'string') {
+            if (/settings|not accept|blocked/i.test(value.message)) reason = 'raid_target_restrictions';
+            else if (/already.*raid|another.*raid/i.test(value.message)) reason = 'raid_already_pending';
+            else if (/too many viewers/i.test(value.message)) reason = 'raid_size_limit';
+          }
+        } catch { /* Never retain arbitrary provider content. */ }
+      }
+      throw Object.assign(new Error(`Twitch request unavailable (${response.status})`), { reason });
+    }
     return response.status === 204 ? undefined as T : await response.json() as T;
   }
-  users(id: string) { return this.request<{ data: { id: string; login: string; display_name: string }[] }>('GET', 'users', { id }); }
+  users(id: string) { return this.request<{ data: { id: string; login: string; display_name: string; created_at?: string }[] }>('GET', 'users', { id }); }
   streams(userId: string) { return this.request<{ data: { user_id: string; type: string }[] }>('GET', 'streams', { user_id: userId }); }
   sendChat(broadcasterId: string, senderId: string, message: string) { return this.request('POST', 'chat/messages', {}, { broadcaster_id: broadcasterId, sender_id: senderId, message }); }
   marker(userId: string) { return this.request('POST', 'streams/markers', {}, { user_id: userId, description: 'Spotter privacy alert' }); }

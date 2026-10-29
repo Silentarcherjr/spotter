@@ -3,23 +3,30 @@ export interface TagOutState {
   phase: 'idle' | 'suggested' | 'confirming' | 'raiding' | 'covered' | 'tag-back' | 'home';
   lowSince: number | null; homeId: string | null; partnerId: string | null; returning: boolean; cancelPending: boolean;
 }
-export type TagOutEvent = { type: 'energy'; score: number | null } | { type: 'raid_confirmed'; fromId: string; toId: string } | { type: 'approve' | 'raid_started' | 'request_back' | 'cancel' | 'raid_cancelled' | 'failed' | 'cancel_failed' };
-export interface TagOutContext { now: number; broadcasterId: string; tokenOwnerId: string; sourceLive: boolean; crew: readonly Partner[]; recentRaids: readonly number[] }
+export type TagOutEvent = { type: 'energy'; score: number | null } | { type: 'raid_confirmed'; fromId: string; toId: string } | { type: 'request' | 'approve' | 'raid_started' | 'request_back' | 'cancel' | 'raid_cancelled' | 'failed' | 'cancel_failed' };
+export interface TagOutPolicy { energyThreshold: number; sustainMs: number }
+export interface TagOutContext { policy?: TagOutPolicy; now: number; broadcasterId: string; tokenOwnerId: string; sourceLive: boolean; crew: readonly Partner[]; recentRaids: readonly number[] }
 export type RaidAction = { type: 'start_raid'; targetId: string } | { type: 'cancel_raid' };
 export const initialTagOut = (): TagOutState => ({ phase: 'idle', lowSince: null, homeId: null, partnerId: null, returning: false, cancelPending: false });
 export const choosePartner = (crew: readonly Partner[]): Partner | null => crew.filter((partner) => partner.live && Number.isFinite(partner.energy) && partner.energy >= 60).toSorted((a, b) => b.energy - a.energy || a.id.localeCompare(b.id))[0] ?? null;
 
 export function transitionTagOut(previous: TagOutState, event: TagOutEvent, context: TagOutContext): { state: TagOutState; actions: RaidAction[] } {
+  const policy = context.policy ?? { energyThreshold: 45, sustainMs: 60_000 };
+  if (!Number.isInteger(policy.energyThreshold) || policy.energyThreshold < 1 || policy.energyThreshold > 100 || !Number.isInteger(policy.sustainMs) || policy.sustainMs < 1000 || policy.sustainMs > 3_600_000) throw new Error('Invalid Tag Out policy');
   let state = { ...previous };
   const actions: RaidAction[] = [];
   const pending = state.phase === 'confirming' || state.phase === 'raiding';
   if (event.type === 'energy' && state.phase === 'idle') {
-    if (event.score === null || !Number.isFinite(event.score) || event.score > 30) state.lowSince = null;
+    if (event.score === null || !Number.isFinite(event.score) || event.score < 0 || event.score >= policy.energyThreshold) state.lowSince = null;
     else {
       state.lowSince ??= context.now;
       const partner = choosePartner(context.crew.filter((candidate) => candidate.id !== context.broadcasterId));
-      if (context.now - state.lowSince >= 120_000 && partner && context.sourceLive) state = { ...state, phase: 'suggested', homeId: context.broadcasterId, partnerId: partner.id };
+      if (context.now - state.lowSince >= policy.sustainMs && partner && context.sourceLive) state = { ...state, phase: 'suggested', homeId: context.broadcasterId, partnerId: partner.id };
     }
+  }
+  if (event.type === 'request' && ['idle', 'home'].includes(state.phase) && context.sourceLive && context.broadcasterId) {
+    const partner = choosePartner(context.crew.filter(candidate => candidate.id !== context.broadcasterId));
+    if (partner) state = { ...initialTagOut(), phase: 'suggested', homeId: context.broadcasterId, partnerId: partner.id };
   }
   if (event.type === 'request_back' && state.phase === 'covered') state.phase = 'tag-back';
   if (event.type === 'approve' && (state.phase === 'suggested' || state.phase === 'tag-back')) {

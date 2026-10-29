@@ -1,7 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { initialTagOut, transitionTagOut } from '../../core/tagout.ts';
-import type { TagOutContext, TagOutState, Partner } from '../../core/tagout.ts';
+import type { TagOutContext, TagOutState, TagOutPolicy, Partner } from '../../core/tagout.ts';
 
+const httpStatus = (error: unknown): number | null => { const match = error instanceof Error ? /^Twitch request unavailable \((\d{3})\)$/.exec(error.message) : null; return match ? Number(match[1]) : null; };
 interface Identity { broadcasterId: string; tokenOwnerId: string; sourceLive: boolean }
 interface Dependencies { identity: () => Identity | null; live: (id: string) => Promise<boolean>; start: (from: string, to: string) => Promise<unknown>; cancel: (id: string) => Promise<unknown>; knownIds?: readonly string[] }
 export class TagOut {
@@ -13,7 +14,11 @@ export class TagOut {
   private status = 'idle';
   private owner: string | null = null;
   private countdownUntil: number | null = null;
-  constructor(db: DatabaseSync, dependencies: Dependencies) {
+  private raidHttpStatus: number | null = null;
+  private raidFailure: string | null = null;
+  private policy: TagOutPolicy;
+  constructor(db: DatabaseSync, dependencies: Dependencies, policy: TagOutPolicy = { energyThreshold: 45, sustainMs: 60_000 }) {
+    this.policy = policy;
     this.db = db; this.dependencies = dependencies;
     db.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY,value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS raid_attempts (broadcaster_id TEXT NOT NULL,at INTEGER NOT NULL,kind TEXT NOT NULL)');
   }
@@ -35,7 +40,7 @@ export class TagOut {
       this.status = this.state.phase;
     }
     const attempts = this.db.prepare('SELECT at FROM raid_attempts WHERE broadcaster_id=? AND at>?').all(broadcasterId, now - 600_000) as { at: number }[];
-    return { now, broadcasterId, tokenOwnerId: identity?.tokenOwnerId ?? '', sourceLive: identity?.sourceLive ?? false, crew: [...this.crew, ...(this.dependencies.knownIds ?? []).filter((id) => !this.crew.some((peer) => peer.id === id)).map((id) => ({ id, live: false, energy: 0 }))], recentRaids: attempts.map((attempt) => attempt.at) };
+    return { policy: this.policy, now, broadcasterId, tokenOwnerId: identity?.tokenOwnerId ?? '', sourceLive: identity?.sourceLive ?? false, crew: [...this.crew, ...(this.dependencies.knownIds ?? []).filter((id) => !this.crew.some((peer) => peer.id === id)).map((id) => ({ id, live: false, energy: 0 }))], recentRaids: attempts.map((attempt) => attempt.at) };
   }
   private save(): void {
     if (!this.owner) return;
@@ -47,11 +52,19 @@ export class TagOut {
     const context = this.context(now);
     this.state = transitionTagOut(this.state, { type: 'energy', score: energy }, context).state; this.save();
   }
+  request(now: number): void {
+    const context = this.context(now);
+    if (this.busy || !['idle', 'home'].includes(this.state.phase)) return;
+    this.state = transitionTagOut(this.state, { type: 'request' }, context).state;
+    this.status = this.state.phase === 'suggested' ? 'Relay requested; approval required' : 'Relay unavailable: both channels must be live and a partner needs energy >=60';
+    this.save();
+  }
   async approve(now: number): Promise<void> {
     if (this.busy || !['suggested', 'tag-back'].includes(this.state.phase)) return;
     this.busy = true;
     try {
       const context = this.context(now);
+      this.raidHttpStatus = null; this.raidFailure = null;
       const target = this.state.phase === 'tag-back' ? this.state.homeId : this.state.partnerId;
       if (!target || !context.broadcasterId) return;
       const [sourceLive, targetLive] = await Promise.all([this.dependencies.live(context.broadcasterId), this.dependencies.live(target)]);
@@ -66,7 +79,15 @@ export class TagOut {
           await this.dependencies.start(context.broadcasterId, action.targetId);
           this.state = transitionTagOut(this.state, { type: 'raid_started' }, fresh).state;
           this.countdownUntil = now + 90_000; this.status = 'Waiting for Twitch raid confirmation';
-        } catch { this.status = 'Raid response unavailable; verify Twitch or cancel'; }
+        } catch (error) {
+          this.raidHttpStatus = httpStatus(error);
+          const reason = error && typeof error === 'object' && 'reason' in error ? error.reason : null;
+          this.raidFailure = typeof reason === 'string' && ['raid_target_restrictions', 'raid_already_pending', 'raid_size_limit'].includes(reason) ? reason : null;
+          if (this.raidHttpStatus !== null && this.raidHttpStatus >= 400 && this.raidHttpStatus < 500 && this.raidHttpStatus !== 409) {
+            this.state = transitionTagOut(this.state, { type: 'failed' }, fresh).state;
+            this.countdownUntil = null; this.status = `Raid rejected by Twitch (${this.raidHttpStatus})${this.raidFailure ? ` · ${this.raidFailure}` : ''}; approval required to retry`;
+          } else this.status = 'Raid response unavailable; verify Twitch or cancel';
+        }
       }
     } catch { this.status = 'Live status unavailable; no raid requested'; }
     finally { this.busy = false; this.save(); }
@@ -85,7 +106,13 @@ export class TagOut {
           await this.dependencies.cancel(context.broadcasterId);
           this.state = transitionTagOut(this.state, { type: 'raid_cancelled' }, context).state;
           this.countdownUntil = null; this.status = 'Cancelled';
-        } catch { this.state = transitionTagOut(this.state, { type: 'cancel_failed' }, context).state; this.status = 'Cancellation unavailable; retry'; }
+        } catch (error) {
+          this.raidHttpStatus = httpStatus(error);
+          if (this.raidHttpStatus === 404) {
+            this.state = transitionTagOut(this.state, { type: 'raid_cancelled' }, context).state;
+            this.countdownUntil = null; this.status = 'No pending raid on Twitch';
+          } else { this.state = transitionTagOut(this.state, { type: 'cancel_failed' }, context).state; this.status = 'Cancellation unavailable; retry'; }
+        }
       }
     } finally { this.busy = false; this.save(); }
   }
@@ -98,6 +125,7 @@ export class TagOut {
   snapshot(now: number) {
     const context = this.context(now);
     return {
+      raidHttpStatus: this.raidHttpStatus, raidFailure: this.raidFailure,
       crew: this.crew.map((partner) => ({ ...partner })), tagout: structuredClone(this.state), status: this.status,
       countdownSeconds: this.countdownUntil === null ? null : Math.max(0, Math.ceil((this.countdownUntil - now) / 1000)),
       coveringFor: this.state.partnerId === context.broadcasterId && ['covered', 'tag-back'].includes(this.state.phase) ? this.state.homeId : null,

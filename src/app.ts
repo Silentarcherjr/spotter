@@ -15,19 +15,20 @@ import { ChatGuard } from './modules/offthemap/chat-guard.ts';
 import { initialTagOut } from './core/tagout.ts';
 import { SecondWind, parseNumericFeatures } from './modules/secondwind/runtime.ts';
 import { advanceCombinedAlert } from './core/chat.ts';
-import { parseEnergyAlertThreshold } from './config.ts';
+import { parseEnergyAlertThreshold, parseTagOutEnergyThreshold, parseTagOutSustainS } from './config.ts';
 import { sessionReport } from './core/session.ts';
 import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
     done();
   } });
   const energyAlertThreshold = parseEnergyAlertThreshold(options.energyAlertThreshold);
+  const tagoutPolicy = { energyThreshold: parseTagOutEnergyThreshold(options.tagoutPolicy?.energyThreshold), sustainMs: parseTagOutSustainS(options.tagoutPolicy?.sustainSeconds) * 1000 };
   const database = new DatabaseSync(options.databasePath);
   database.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
   const secondwind = !options.simulated ? new SecondWind(database) : null;
@@ -53,7 +54,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
       socket.on('close', () => { if (sensorSocket === socket) { sensorSocket = null; energyHold = null; } });
     });
   });
-  let demo = options.simulated ? new DemoSession(true, energyAlertThreshold) : null;
+  let demo = options.simulated ? new DemoSession(true, energyAlertThreshold, tagoutPolicy) : null;
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
   const obs = !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
   const ai = !options.simulated && options.ai ? new ResponsesAI(options.ai) : null;
@@ -74,7 +75,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     live: async (id) => (await twitch.helix.streams(id)).data.some((stream) => stream.user_id === id && stream.type === 'live'),
     start: (from, to) => twitch.helix.startRaid(from, to), cancel: (id) => twitch.helix.cancelRaid(id),
     knownIds: (options.crew ?? []).map((peer) => peer.id),
-  }) : null;
+  }, tagoutPolicy) : null;
   twitch?.setRaidHandler((from, to, at) => tagout?.confirm(from, to, at));
   let closing = false;
   let crewBusy = false;
@@ -117,7 +118,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     if (!options.crewToken || request.headers.authorization !== `Bearer ${options.crewToken}` || !secondwind) return reply.code(401).send({ error: 'Crew authorization required' });
     return { live: twitch?.snapshot().live ?? null, energy: secondwind.snapshot(Date.now()).energy };
   });
-  for (const action of ['approve', 'cancel', 'requestBack'] as const) {
+  for (const action of ['request', 'approve', 'cancel', 'requestBack'] as const) {
     app.post(`/api/relay/${action}`, async (_request, reply) => {
       if (!tagout) return reply.code(503).send({ error: 'Twitch authorization required' });
       await tagout[action](Date.now()); return tagout.snapshot(Date.now());
@@ -130,8 +131,8 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   }, async (request) => { hudEnabled = request.body.enabled; return { enabled: hudEnabled }; });
   if (demo) {
     app.get('/api/demo/frame', async () => frames[(demo!.snapshot().step - 1) % frames.length]);
-    app.post('/api/demo/reset', async () => { demo = new DemoSession(true, energyAlertThreshold); demo.tick(); return demo.snapshot(); });
-    for (const action of ['approve', 'cancel', 'requestBack', 'dismiss'] as const) {
+    app.post('/api/demo/reset', async () => { demo = new DemoSession(true, energyAlertThreshold, tagoutPolicy); demo.tick(); return demo.snapshot(); });
+    for (const action of ['request', 'approve', 'cancel', 'requestBack', 'dismiss'] as const) {
       app.post(`/api/demo/${action}`, async () => { demo![action](); return demo!.snapshot(); });
     }
   }
@@ -183,7 +184,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     crew: [], tagout: initialTagOut(), timeline: [], clues: [],
     ...(tagout?.snapshot(Date.now()) ?? {}),
     ...secondwind!.snapshot(Date.now()),
-    energyAlertThreshold,
+    energyAlertThreshold, tagoutEnergyThreshold: tagoutPolicy.energyThreshold, tagoutSustainS: tagoutPolicy.sustainMs / 1000,
     combinedAlert: advanceCombinedAlert(energyHold, { now: Date.now(), energy: secondwind!.snapshot(Date.now()).energy, exposure: offthemap?.snapshot().exposure.score ?? null, available: offthemap?.snapshot().analysis === 'available', threshold: energyAlertThreshold }).active,
     ...(offthemap?.snapshot() ?? {}),
     moderation: guard?.snapshot().entries ?? [],

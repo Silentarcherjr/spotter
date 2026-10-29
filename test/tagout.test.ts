@@ -88,3 +88,39 @@ test('crew status requires a shared secret and shares only energy/live fields', 
     assert.deepEqual(response.json(), { live: null, energy: null });
   } finally { await app.close(); }
 });
+
+test('manual request creates only a suggestion and preserves an existing pending raid after restart', async () => {
+  const db = new DatabaseSync(':memory:'); let starts = 0;
+  const dependencies = { identity: () => ({ broadcasterId: 'main', tokenOwnerId: 'main', sourceLive: true }), live: async () => true, start: async () => { starts++; }, cancel: async () => {}, knownIds: ['partner'] };
+  try {
+    const module = new TagOut(db, dependencies, { energyThreshold: 45, sustainMs: 60_000 });
+    module.update(75, [{ id: 'partner', live: true, energy: 80 }], 0);
+    module.request(1); assert.equal(module.snapshot(1).tagout.phase, 'suggested'); assert.equal(starts, 0);
+    await module.approve(2); assert.equal(starts, 1);
+    const restarted = new TagOut(db, dependencies);
+    restarted.request(3);
+    assert.equal(restarted.snapshot(3).tagout.phase, 'raiding'); assert.equal(starts, 1);
+  } finally { db.close(); }
+});
+
+test('definite Twitch rejections expose only HTTP diagnostics and require a fresh approval', async () => {
+  const db = new DatabaseSync(':memory:'); let starts = 0;
+  const module = new TagOut(db, { identity: () => ({ broadcasterId: 'main', tokenOwnerId: 'main', sourceLive: true }), live: async () => true, start: async () => { starts++; throw Object.assign(new Error('Twitch request unavailable (400)'), { reason: 'raid_target_restrictions' }); }, cancel: async () => {} });
+  try {
+    module.update(20, [{ id: 'partner', live: true, energy: 80 }], 0); module.request(1);
+    await module.approve(2);
+    const s = module.snapshot(3);
+    assert.equal(s.tagout.phase, 'suggested'); assert.equal(s.raidHttpStatus, 400);
+    assert.equal(s.raidFailure, 'raid_target_restrictions'); assert.equal(starts, 1);
+    module.update(20, [{ id: 'partner', live: true, energy: 80 }], 4); assert.equal(starts, 1);
+  } finally { db.close(); }
+});
+
+test('Twitch no-pending-raid404 clears the pending cancellation without declaring a successful raid', async () => {
+  const db = new DatabaseSync(':memory:');
+  const module = new TagOut(db, { identity: () => ({ broadcasterId: 'main', tokenOwnerId: 'main', sourceLive: true }), live: async () => true, start: async () => { throw Error('timeout'); }, cancel: async () => { throw Error('Twitch request unavailable (404)'); } });
+  try {
+    module.update(20, [{ id: 'partner', live: true, energy: 80 }], 0); module.request(1); await module.approve(2); await module.cancel(3);
+    assert.equal(module.snapshot(4).tagout.phase, 'idle'); assert.equal(module.snapshot(4).countdownSeconds, null);
+  } finally { db.close(); }
+});

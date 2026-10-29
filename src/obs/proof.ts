@@ -50,11 +50,11 @@ export async function showObsMain(url: string, password: string) {
   finally { await wire.disconnect().catch(() => {}); }
 }
 
-export async function readObsHud(url: string, password: string): Promise<string> {
+export async function readObsHud(url: string, password: string, sourceName: 'Spotter Overlay' | 'Spotter Relay HUD Bridge' = 'Spotter Overlay'): Promise<string> {
   const wire = new OBSWebSocket();
   try {
     await wire.connect(url, password);
-    return (await wire.call('GetSourceScreenshot', { sourceName: 'Spotter Overlay', imageFormat: 'png', imageWidth: 1280 })).imageData;
+    return (await wire.call('GetSourceScreenshot', { sourceName, imageFormat: 'png', imageWidth: 1280 })).imageData;
   } finally { await wire.disconnect().catch(() => {}); }
 }
 

@@ -177,3 +177,30 @@ test('combined alert requires thirty continuous seconds strictly below configura
   assert.equal(step(state, 0, 44).active, false); // Clock reversal starts a fresh episode.
   assert.throws(() => step(state, 32000, 44, 80, true, NaN));
 });
+
+test('Tag Out defaults to strictly below45 for60s and resets on recovery or missing energy', () => {
+  let state = initialTagOut();
+  const update = (score: number | null, now: number) => { state = transitionTagOut(state, { type: 'energy', score }, { ...context, now }).state; };
+  update(44, 0); update(44, 59_999); assert.equal(state.phase, 'idle');
+  update(45, 60_000); assert.equal(state.lowSince, null);
+  update(44, 61_000); update(null, 120_000); assert.equal(state.lowSince, null);
+  update(44, 121_000); update(44, 181_000); assert.equal(state.phase, 'suggested');
+});
+
+test('Tag Out configurable energy and sustain policy preserves high-energy partner and approval gates', () => {
+  const policy = { energyThreshold: 50, sustainMs: 90_000 };
+  const start = transitionTagOut(initialTagOut(), { type: 'energy', score: 49 }, { ...context, now: 0, policy });
+  assert.equal(transitionTagOut(start.state, { type: 'energy', score: 49 }, { ...context, now: 89_999, policy }).state.phase, 'idle');
+  const suggested = transitionTagOut(start.state, { type: 'energy', score: 49 }, { ...context, now: 90_000, policy });
+  assert.equal(suggested.state.phase, 'suggested'); assert.deepEqual(suggested.actions, []);
+  assert.throws(() => transitionTagOut(initialTagOut(), { type: 'energy', score: 20 }, { ...context, policy: { energyThreshold: 101, sustainMs: 1000 } }));
+});
+
+test('manual relay request bypasses personal energy only and never starts a raid', () => {
+  const requested = transitionTagOut(initialTagOut(), { type: 'request' }, context);
+  assert.equal(requested.state.phase, 'suggested'); assert.deepEqual(requested.actions, []);
+  assert.equal(transitionTagOut(initialTagOut(), { type: 'request' }, { ...context, sourceLive: false }).state.phase, 'idle');
+  assert.equal(transitionTagOut(initialTagOut(), { type: 'request' }, { ...context, crew: [{ id: 'partner', live: true, energy: 59 }] }).state.phase, 'idle');
+  const home = { ...initialTagOut(), phase: 'home' as const };
+  assert.equal(transitionTagOut(home, { type: 'request' }, context).state.phase, 'suggested');
+});

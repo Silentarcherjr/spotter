@@ -18,7 +18,11 @@
     "twitch:fixtures": "node --experimental-strip-types scripts/twitch-fixtures.ts",
     "twitch:proof": "node --experimental-strip-types --env-file-if-exists=.env scripts/twitch-proof.ts",
     "obs:proof": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-proof.ts",
-    "twitch:markers": "node --experimental-strip-types --env-file-if-exists=.env scripts/marker-proof.ts"
+    "twitch:markers": "node --experimental-strip-types --env-file-if-exists=.env scripts/marker-proof.ts",
+    "crew:dev": "node --experimental-strip-types --env-file-if-exists=.env scripts/crew-dev.ts",
+    "crew:link": "node --experimental-strip-types scripts/crew-link.ts",
+    "obs:secondary": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-secondary.ts",
+    "obs:hud-bridge": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-hud-bridge.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

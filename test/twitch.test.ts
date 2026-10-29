@@ -162,3 +162,12 @@ test('captured chat fixture redaction preserves structure and never retains raw 
   assert.equal(redacted.message.text, 'Spotter fixture message');
   assert.equal(redacted.reply, null);
 });
+
+test('raid errors retain a static reason category without retaining raw provider text or secrets', async () => {
+  const helix = new Helix('fake-client', async () => 'fake-token', async () => new Response(JSON.stringify({ message: 'The targeted channel does not accept raids due to settings fake-secret-123' }), { status: 400 }));
+  await assert.rejects(helix.startRaid('100', '200'), (error: unknown) => {
+    const e = error as Error & { reason?: string };
+    assert.equal(e.reason, 'raid_target_restrictions');
+    assert.doesNotMatch(JSON.stringify(e) + e.message, /fake-secret-123/); return true;
+  });
+});

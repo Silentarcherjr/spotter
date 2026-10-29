@@ -84,3 +84,14 @@ test('public HUD has a closed presentation payload without exposure clues scores
     assert.doesNotMatch(JSON.stringify(hud), /exposure|clues|score|privacy|analysis/);
   } finally { await app.close(); }
 });
+
+test('manual relay request has a separate approval step in the explicit demo API', async () => {
+  const app = createApp({ databasePath: ':memory:', simulated: true });
+  try {
+    const response = await app.inject({ method: 'POST', url: '/api/demo/request' });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().tagout.phase, 'suggested');
+    assert.ok(!response.json().events.some((event: { kind: string }) => event.kind === 'start_raid'));
+    assert.equal((await app.inject({ method: 'POST', url: '/api/demo/approve' })).json().tagout.phase, 'raiding');
+  } finally { await app.close(); }
+});

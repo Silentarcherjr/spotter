@@ -6,7 +6,7 @@ A local companion with three modules: Off the Map (identifying-clue exposure), S
 
 ## Current status
 
-The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real OAuth and EventSub chat rate have been checked on the authorized channel. Live blocked-term enforcement/removal and a controlled Chat Guard deletion have also been verified. Real OBS capture/vision, threshold privacy, stream markers and scene restoration have now been exercised while streaming a prerecorded clip. Real raids and microphone capture remain unverified.
+The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real OAuth and EventSub chat rate have been checked on the authorized channel. Live blocked-term enforcement/removal and a controlled Chat Guard deletion have also been verified. Real OBS capture/vision, threshold privacy, stream markers and scene restoration have now been exercised while streaming a prerecorded clip. A real outbound raid and cancellation have now been verified between two owned live channels; tag back is blocked by the receiving channel’s minimum raider-account age. Natural microphone capture remains unverified.
 
 | Area | Verified | Still needed |
 | --- | --- | --- |
@@ -203,9 +203,21 @@ Run one local Spotter instance per broadcaster with separate API/Vite ports and 
 
 Copy [the crew example](docs/crew.example.json) to ignored `data/crew.json`, fill the partner's numeric Twitch user ID, local endpoint and shared secret, then set `CREW_FILE=data/crew.json`. Each instance's `CREW_SHARED_SECRET` goes into the other instance's peer config. The authenticated loopback status endpoint shares **only energy/live status**, never OAuth tokens or clues. Configure the second instance's ports, database and registered OAuth redirect as well.
 
-Two minutes of low available energy can suggest a live high-energy partner. A click rechecks both streams via Helix, partner energy, source token ownership and the persisted request window. The UI waits for EventSub confirmation; the 90-second countdown is informational. Ambiguous write failure stays pending with a cancel path, without automatic retry or false success. State/attempts survive restarts and are isolated per broadcaster.
+`TAGOUT_ENERGY_THRESHOLD=45` and `TAGOUT_SUSTAIN_S=60` configure the automatic suggestion: available energy must stay **strictly below45 for60s** by default. The partner must still be live with energy≥60. These are personal heuristics, not clinical thresholds: the prior file baseline had a theoretical floor around42 (the original tired endings actually measured55–56), making the old30 rule unreachable for that profile. The processed SIMULATED demo now measures44. No energy score or calibration formula changed.
 
-The receiving partner can request tag back and must approve it with their own dashboard/token. Their opt-in overlay shows “Covering for …’s community”. Both live channels, target settings and the actual raid must still be verified and recorded.
+**Pedir relevo** requests a suggestion manually without waiting for personal low energy; it never starts a raid. Both live-channel/partner requirements still apply, and the separate approval button remains mandatory. A pending/persisted raid cannot be replaced by a new manual request.
+
+For two local accounts, register both OAuth redirects (3210/3220), then run `npm run crew:dev -- primary` and `npm run crew:dev -- secondary` in separate terminals, instead of an already-running dev process on those ports. The launcher creates private600-mode files under ignored `data/crew/`, uses API3210/Vite5173 for the principal and API3220/Vite5174/secondary.sqlite for the companion, and disables OBS/AI in the companion server. It inherits the Twitch app credentials internally without printing/copying them into crew JSON. Authorize a different account per instance, run `npm run crew:link`, and restart both to load reciprocal peer identities. Duplicate account IDs are rejected. Vite denies all HTTP access to data/, including /@fs paths; the sensor reads selected files locally. `/dashboard/crew.html` provides two visible sensor panes; normal separate sensor tabs are also available.
+
+On this Mac, `npm run obs:secondary -- --launch` opens a second OBS with a separate WebSocket port4456; `npm run obs:secondary` prepares profile/collection **Spotter - alredio**, Main/Privacy and a public browser overlay pointing to5174. The user configures the secondary Twitch stream credentials manually. No output starts automatically, and no stream settings/key are requested by the helper. Profile changes are refused while stream/record output is active. The primary remains on4455. A frozen secondary can be restarted independently; the setup now times out instead of hanging.
+
+The second OBS browser engine failed to render during the live test. `npm run obs:hud-bridge` is a temporary workaround: the working primary engine renders **only the public receiver overlay**, off canvas, and its transparent PNG updates an image source in secondary Main/Privacy. No camera/vision frames or private dashboard data enter the bridge. The helper must run for live updates; stop it with Ctrl+C and use `npm run obs:hud-bridge -- --stop` to disable its temporary sources. It does not stop streaming. Native dual-OBS browser rendering remains unresolved.
+
+Definite Twitch4xx rejections (except409) return to a state requiring fresh approval and expose only an HTTP code/static reason, never raw provider text. Network/5xx/409 uncertainty stays pending with cancellation available. A cancellation404 means no raid is pending; it never fabricates a successful raid/home confirmation.
+
+A click rechecks both streams via Helix, partner energy, source token ownership and the persisted request window. The UI waits for EventSub confirmation; the 90-second countdown is informational. Ambiguous write failure stays pending with a cancel path, without automatic retry or false success. State/attempts survive restarts and are isolated per broadcaster.
+
+The receiving partner can request tag back and must approve it with their own dashboard/token. Their opt-in overlay shows “Covering for …’s community”. The two-channel live test verified the automatic suggestion, manual request, click approval, cancellation, Twitch-native countdown and outbound EventSub confirmation. Tag back was requested/approved from the companion but rejected with HTTP400: the primary requires a raider account at least30days old, while alredio was created on2026-10-29. The session is paused; home confirmation remains unverified. See [the handoff](docs/TAGOUT_HANDOFF.md).
 
 ## Architecture and ethics
 
@@ -238,7 +250,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**89 automated tests (89 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**105 automated tests (105 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

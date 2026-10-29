@@ -5,7 +5,7 @@ import { calibrate, scoreEnergy } from '../core/energy.ts';
 import { chatVelocity, advanceCombinedAlert, correlation } from '../core/chat.ts';
 import { decideModeration } from '../core/moderation.ts';
 import { initialTagOut, transitionTagOut } from '../core/tagout.ts';
-import type { TagOutEvent } from '../core/tagout.ts';
+import type { TagOutEvent, TagOutPolicy } from '../core/tagout.ts';
 import type { AudioFeatures, FrameObservation } from '../core/types.ts';
 import { frameSource, voiceFeatures, syntheticChat, simulatedCrew } from './sources.ts';
 import { createSimEvent } from './events.ts';
@@ -30,7 +30,9 @@ export class DemoSession {
   private rally = initialRally();
   private baseline;
   private energyThreshold: number;
-  constructor(enabled: boolean, energyThreshold = 45) {
+  private tagoutPolicy: TagOutPolicy;
+  constructor(enabled: boolean, energyThreshold = 45, tagoutPolicy: TagOutPolicy = { energyThreshold: 45, sustainMs: 60_000 }) {
+    this.tagoutPolicy = tagoutPolicy;
     this.energyThreshold = energyThreshold;
     if (!enabled) throw new Error('Simulation requires SIM=1');
     this.crew = simulatedCrew(true);
@@ -42,7 +44,7 @@ export class DemoSession {
     const returning = this.tagout.phase === 'tag-back' || this.tagout.returning;
     const sourceId = returning ? this.crew.id : 'main';
     const result = transitionTagOut(this.tagout, event, {
-      now: this.now, broadcasterId: sourceId, tokenOwnerId: sourceId, sourceLive: true,
+      policy: this.tagoutPolicy, now: this.now, broadcasterId: sourceId, tokenOwnerId: sourceId, sourceLive: true,
       crew: returning ? [{ id: 'main', live: true, energy: 80 }] : [this.crew], recentRaids: this.recentRaids,
     });
     this.tagout = result.state;
@@ -83,6 +85,7 @@ export class DemoSession {
     for (let at = this.now - 29_000; at <= this.now; at += 1000) this.energyHold = advanceCombinedAlert(this.energyHold, { now: at, energy: this.energy, exposure: this.exposure.score, available: this.exposure.analysis === 'available', threshold: this.energyThreshold });
     this.step++;
   }
+  request(): void { this.raid({ type: 'request' }); }
   approve(): void { this.raid({ type: 'approve' }); }
   requestBack(): void { this.raid({ type: 'request_back' }); }
   cancel(): void {
