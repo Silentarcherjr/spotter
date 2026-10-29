@@ -42,6 +42,22 @@ export class TagOut {
     const attempts = this.db.prepare('SELECT at FROM raid_attempts WHERE broadcaster_id=? AND at>?').all(broadcasterId, now - 600_000) as { at: number }[];
     return { policy: this.policy, now, broadcasterId, tokenOwnerId: identity?.tokenOwnerId ?? '', sourceLive: identity?.sourceLive ?? false, crew: [...this.crew, ...(this.dependencies.knownIds ?? []).filter((id) => !this.crew.some((peer) => peer.id === id)).map((id) => ({ id, live: false, energy: 0 }))], recentRaids: attempts.map((attempt) => attempt.at) };
   }
+  async abandon(now: number): Promise<boolean> {
+    const context = this.context(now);
+    if (this.busy || !context.broadcasterId || context.tokenOwnerId !== context.broadcasterId || context.sourceLive || ['confirming', 'raiding'].includes(this.state.phase)) return false;
+    this.busy = true;
+    try {
+      if (await this.dependencies.live(context.broadcasterId)) return false;
+      if (this.state.phase !== 'idle') {
+        const result = transitionTagOut(this.state, { type: 'abandon' }, context);
+        if (result.state.phase !== 'idle' || result.actions.length) return false;
+        this.db.exec('CREATE TABLE IF NOT EXISTS relay_abandonments (broadcaster_id TEXT NOT NULL,at INTEGER NOT NULL,state TEXT NOT NULL,PRIMARY KEY(broadcaster_id,at))');
+        this.db.prepare('INSERT INTO relay_abandonments(broadcaster_id,at,state) VALUES(?,?,?)').run(context.broadcasterId, now, JSON.stringify(this.state));
+        this.state = result.state;
+      }
+      this.countdownUntil = null; this.status = 'Previous relay abandoned locally; no home confirmation'; this.save(); return true;
+    } finally { this.busy = false; }
+  }
   private save(): void {
     if (!this.owner) return;
     this.db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(`relay_state:${this.owner}`, JSON.stringify({ state: this.state, countdownUntil: this.countdownUntil }));

@@ -14,7 +14,7 @@ The private repository contains the scaffold, pure core, key-free scripted demo 
 | Twitch | Real OAuth/chat rate, blocked-term hold/removal, audited test deletion and CLI/live fixtures | Real raid and submission recording |
 | Off the Map | Real OBS/vision → privacy/marker → restore; WebSocket disconnect survival; private dashboard take | Full-motion submission edit; full OBS-process shutdown proof |
 | Second Wind | Shared mic/file extractor, 11-minute TTS baseline, measured energy/chat and real OBS HUD | Natural microphone and tired-voice validation |
-| Tag Out | Approval, live guards, cancellation, restart/rate-limit tests | Two-channel raid/tag-back recording |
+| Tag Out | Approval/live guards, cancellation and real two-channel raid/tag-back with EventSub home confirmation | Finished video edit |
 
 ## Run locally
 
@@ -209,6 +209,8 @@ Copy [the crew example](docs/crew.example.json) to ignored `data/crew.json`, fil
 
 For two local accounts, register both OAuth redirects (3210/3220), then run `npm run crew:dev -- primary` and `npm run crew:dev -- secondary` in separate terminals, instead of an already-running dev process on those ports. The launcher creates private600-mode files under ignored `data/crew/`, uses API3210/Vite5173 for the principal and API3220/Vite5174/secondary.sqlite for the companion, and disables OBS/AI in the companion server. It inherits the Twitch app credentials internally without printing/copying them into crew JSON. Authorize a different account per instance, run `npm run crew:link`, and restart both to load reciprocal peer identities. Duplicate account IDs are rejected. Vite denies all HTTP access to data/, including /@fs paths; the sensor reads selected files locally. `/dashboard/crew.html` provides two visible sensor panes; normal separate sensor tabs are also available.
 
+When replacing a companion after an unfinished relay, stop both Spotter instances while both channels are offline and run `npm run crew:retire` before authorizing the replacement. It archives the old cycle locally, returns to idle without a Twitch action or home confirmation, and preserves raid-attempt history. Live or pending raids are refused. OAuth forces account verification; authorize the replacement on3220, relink and restart both instances.
+
 On this Mac, `npm run obs:secondary -- --launch` opens a second OBS with a separate WebSocket port4456; `npm run obs:secondary` prepares profile/collection **Spotter - alredio**, Main/Privacy and a public browser overlay pointing to5174. The user configures the secondary Twitch stream credentials manually. No output starts automatically, and no stream settings/key are requested by the helper. Profile changes are refused while stream/record output is active. The primary remains on4455. A frozen secondary can be restarted independently; the setup now times out instead of hanging.
 
 The second OBS browser engine failed to render during the live test. `npm run obs:hud-bridge` is a temporary workaround: the working primary engine renders **only the public receiver overlay**, off canvas, and its transparent PNG updates an image source in secondary Main/Privacy. No camera/vision frames or private dashboard data enter the bridge. The helper must run for live updates; stop it with Ctrl+C and use `npm run obs:hud-bridge -- --stop` to disable its temporary sources. It does not stop streaming. Native dual-OBS browser rendering remains unresolved.
@@ -250,7 +252,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**105 automated tests (105 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**107 automated tests (107 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

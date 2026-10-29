@@ -204,3 +204,13 @@ test('manual relay request bypasses personal energy only and never starts a raid
   const home = { ...initialTagOut(), phase: 'home' as const };
   assert.equal(transitionTagOut(home, { type: 'request' }, context).state.phase, 'suggested');
 });
+
+test('explicitly abandoning an offline owned relay resets to idle without fabricating home or raid actions', () => {
+  const covered = { ...initialTagOut(), phase: 'covered' as const, homeId: 'main', partnerId: 'partner' };
+  const offline = { ...context, sourceLive: false };
+  const result = transitionTagOut(covered, { type: 'abandon' }, offline);
+  assert.deepEqual(result.state, initialTagOut()); assert.deepEqual(result.actions, []);
+  assert.equal(transitionTagOut(covered, { type: 'abandon' }, context).state.phase, 'covered');
+  assert.equal(transitionTagOut(covered, { type: 'abandon' }, { ...offline, broadcasterId: 'stranger', tokenOwnerId: 'stranger' }).state.phase, 'covered');
+  for (const phase of ['confirming', 'raiding'] as const) assert.equal(transitionTagOut({ ...covered, phase }, { type: 'abandon' }, offline).state.phase, phase);
+});

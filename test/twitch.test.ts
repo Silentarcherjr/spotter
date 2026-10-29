@@ -25,6 +25,7 @@ test('OAuth state is expiring and single-use; tokens remain in local SQLite; ref
     const url = new URL(auth.authorizeUrl(0));
     assert.equal(url.hostname, 'id.twitch.tv');
     assert.equal(url.searchParams.get('response_type'), 'code');
+    assert.equal(url.searchParams.get('force_verify'), 'true');
     await assert.rejects(auth.exchange('code', 'wrong-state', 1));
     await auth.exchange('code', url.searchParams.get('state')!, 1);
     await assert.rejects(auth.exchange('code', url.searchParams.get('state')!, 2));

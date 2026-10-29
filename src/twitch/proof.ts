@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { TwitchAuth } from './auth.ts';
 import type { TwitchConfig } from './auth.ts';
+import { TagOut } from '../modules/tagout/runtime.ts';
 import { Helix } from './helix.ts';
 import { EventSubClient, subscriptions } from './eventsub.ts';
 
@@ -78,5 +79,21 @@ export async function sendSecondWindChat(config: TwitchConfig, databasePath: str
       if (index < 3) await new Promise((resolve) => setTimeout(resolve, 20000));
     }
     return receipts;
+  } finally { db.close(); }
+}
+
+/** Operator-requested account migration: archive an offline cycle through the tested core. */
+export async function retireLocalRelay(config: TwitchConfig, databasePath: string) {
+  const db = new DatabaseSync(databasePath);
+  try {
+    const auth = new TwitchAuth(db, config); await auth.validate();
+    const userId = auth.identity?.userId; if (!userId) throw new Error('Authorization required');
+    const helix = new Helix(config.clientId, () => auth.accessToken());
+    const live = async (id: string) => (await helix.streams(id)).data.some(stream => stream.user_id === id && stream.type === 'live');
+    const sourceLive = await live(userId);
+    const relay = new TagOut(db, { identity: () => ({ broadcasterId: userId, tokenOwnerId: userId, sourceLive }), live, start: async () => { throw new Error('Raid disabled in migration'); }, cancel: async () => { throw new Error('Cancel any pending raid through the dashboard first'); } });
+    const before = relay.snapshot(Date.now()).tagout.phase;
+    if (!await relay.abandon(Date.now())) throw new Error('Stop streams and resolve pending raids before switching accounts');
+    return { broadcasterId: userId, previousPhase: before, phase: relay.snapshot(Date.now()).tagout.phase, archived: before !== 'idle', homeConfirmed: false };
   } finally { db.close(); }
 }

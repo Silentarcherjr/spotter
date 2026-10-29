@@ -3,7 +3,7 @@ export interface TagOutState {
   phase: 'idle' | 'suggested' | 'confirming' | 'raiding' | 'covered' | 'tag-back' | 'home';
   lowSince: number | null; homeId: string | null; partnerId: string | null; returning: boolean; cancelPending: boolean;
 }
-export type TagOutEvent = { type: 'energy'; score: number | null } | { type: 'raid_confirmed'; fromId: string; toId: string } | { type: 'request' | 'approve' | 'raid_started' | 'request_back' | 'cancel' | 'raid_cancelled' | 'failed' | 'cancel_failed' };
+export type TagOutEvent = { type: 'energy'; score: number | null } | { type: 'raid_confirmed'; fromId: string; toId: string } | { type: 'abandon' | 'request' | 'approve' | 'raid_started' | 'request_back' | 'cancel' | 'raid_cancelled' | 'failed' | 'cancel_failed' };
 export interface TagOutPolicy { energyThreshold: number; sustainMs: number }
 export interface TagOutContext { policy?: TagOutPolicy; now: number; broadcasterId: string; tokenOwnerId: string; sourceLive: boolean; crew: readonly Partner[]; recentRaids: readonly number[] }
 export type RaidAction = { type: 'start_raid'; targetId: string } | { type: 'cancel_raid' };
@@ -16,6 +16,7 @@ export function transitionTagOut(previous: TagOutState, event: TagOutEvent, cont
   let state = { ...previous };
   const actions: RaidAction[] = [];
   const pending = state.phase === 'confirming' || state.phase === 'raiding';
+  if (event.type === 'abandon' && !pending && !context.sourceLive && context.broadcasterId === context.tokenOwnerId && [state.homeId, state.partnerId].includes(context.broadcasterId)) return { state: initialTagOut(), actions: [] };
   if (event.type === 'energy' && state.phase === 'idle') {
     if (event.score === null || !Number.isFinite(event.score) || event.score < 0 || event.score >= policy.energyThreshold) state.lowSince = null;
     else {

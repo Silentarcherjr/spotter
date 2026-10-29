@@ -1,4 +1,11 @@
-# Tag Out — paused at user request, 2026-10-29
+# Tag Out — round trip verified, 2026-10-29
+
+Current companion: **elsilentarcher**, ID493713410, public account creation2020-02-19. Authorization/six scopes and reciprocal crew link verified. Alredio is now only a spectator. The user changed the existing secondary OBS stream key privately; its legacy profile label remains Spotter - alredio. No OBS restart or new profile required. Both previous cycles were explicitly archived while offline with npm run crew:retire, returning to idle with homeConfirmed=false and preserving raid attempts. Receipt: ignored data/takes/tagout-resume-2026-10-29/previous-cycle-retirement.json.
+
+Current local test inputs: primary demo-tagout-low-session.wav repeats the already processed tired30s tail for900s; secondary demo-crew-high.wav remains the1200s reference loop. This changes SIMULATED input only. Same numeric baseline, score and thresholds. Both dev instances and the public HUD bridge are running. User started both broadcasts. Automatic suggestion, separate outbound approval, native countdown2raiders, EventSub covered on both and actual receiver OBS HUD verified. Companion requested/approved return, native countdown2raiders, chat redirected to silemntarcher, matching real EventSub put BOTH instances in HOME. Final countdowns null; no raid pending. At least345.668s continuously below45 observed. New evidence: data/takes/tagout-resume-2026-10-29/ includes home-confirmation.json, summary, screenshots and three segmented H.264 dashboard videos (~1fps samples, duplicated15fps encoding, no audio). No mock event or home-state edit. Broadcasts left running; user controls stopping them. Primary vision disabled for this isolated Tag Out run.
+
+## Previous paused session
+
 
 Verified live: two distinct owned channels, automatic suggestion from measured SIMULATED low audio, manual Pedir relevo, separate click approval, successful pending-raid cancellation, Twitch-native countdown with2raiders, actual outbound EventSub confirmation on both instances, and receiver “Covering for silemntarcher’s community”.
 

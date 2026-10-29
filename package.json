@@ -22,7 +22,8 @@
     "crew:dev": "node --experimental-strip-types --env-file-if-exists=.env scripts/crew-dev.ts",
     "crew:link": "node --experimental-strip-types scripts/crew-link.ts",
     "obs:secondary": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-secondary.ts",
-    "obs:hud-bridge": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-hud-bridge.ts"
+    "obs:hud-bridge": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-hud-bridge.ts",
+    "crew:retire": "node --experimental-strip-types --env-file-if-exists=.env scripts/crew-retire.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

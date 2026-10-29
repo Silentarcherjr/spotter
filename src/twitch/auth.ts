@@ -25,7 +25,7 @@ export class TwitchAuth {
     const state = randomBytes(32).toString('hex');
     this.pending.set(state, now + 600_000);
     const url = new URL('https://id.twitch.tv/oauth2/authorize');
-    url.search = new URLSearchParams({ client_id: this.config.clientId, redirect_uri: this.config.redirectUri, response_type: 'code', scope: scopes.join(' '), state }).toString();
+    url.search = new URLSearchParams({ client_id: this.config.clientId, redirect_uri: this.config.redirectUri, response_type: 'code', force_verify: 'true', scope: scopes.join(' '), state }).toString();
     return url.toString();
   }
   async exchange(code: string, state: string, now = Date.now()): Promise<void> {

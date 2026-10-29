@@ -124,3 +124,20 @@ test('Twitch no-pending-raid404 clears the pending cancellation without declarin
     assert.equal(module.snapshot(4).tagout.phase, 'idle'); assert.equal(module.snapshot(4).countdownSeconds, null);
   } finally { db.close(); }
 });
+
+test('offline abandonment archives the old state and preserves raid attempt history', async () => {
+  const db = new DatabaseSync(':memory:'); let live = true;
+  const deps = { identity: () => ({ broadcasterId: 'main', tokenOwnerId: 'main', sourceLive: live }), live: async () => live, start: async () => {}, cancel: async () => {} };
+  const module = new TagOut(db, deps);
+  try {
+    module.update(75, [{ id: 'partner', live: true, energy: 80 }], 0); module.request(1); await module.approve(2); module.confirm('main', 'partner', 3);
+    assert.equal(await module.abandon(4), false);
+    live = false; assert.equal(await module.abandon(5), true);
+    assert.equal(module.snapshot(6).tagout.phase, 'idle');
+    assert.equal((db.prepare('SELECT COUNT(*) AS n FROM raid_attempts').get() as { n: number }).n, 1);
+    const archive = db.prepare('SELECT state FROM relay_abandonments').get() as { state: string };
+    assert.equal(JSON.parse(archive.state).phase, 'covered');
+    assert.equal(await module.abandon(7), true);
+    assert.equal((db.prepare('SELECT COUNT(*) AS n FROM relay_abandonments').get() as { n: number }).n, 1);
+  } finally { db.close(); }
+});
