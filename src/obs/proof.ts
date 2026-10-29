@@ -88,3 +88,12 @@ export async function repairObsHud(url: string, password: string): Promise<void>
     await wire.call('SetInputSettings', { inputName: 'Spotter Overlay', inputSettings: { is_local_file: false, url: `http://127.0.0.1:5173/overlay/?recorded=1&refresh=${Date.now()}`, width: 1920, height: 1080, css: 'body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }', shutdown: false }, overlay: true });
   } finally { await wire.disconnect().catch(() => {}); }
 }
+
+/** Restart only the prerecorded source, never OBS stream/record outputs. */
+export async function restartObsClip(url: string, password: string): Promise<void> {
+  const wire = new OBSWebSocket();
+  try {
+    await wire.connect(url, password);
+    await wire.call('TriggerMediaInputAction', { inputName: 'Spotter IRL', mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART' });
+  } finally { await wire.disconnect().catch(() => {}); }
+}
