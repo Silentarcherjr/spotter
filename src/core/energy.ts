@@ -18,6 +18,7 @@ export function calibrate(samples: readonly AudioFeatures[], now: number): { pro
   const progress = start === undefined || end === undefined ? 0 : clamp((end - start) / 600_000, 0, 1);
   if (progress < 1 || start === undefined) return { progress, baseline: null };
   const window = valid.filter((sample) => sample.at <= start + 600_000);
+  if (window.length < 300) return { progress, baseline: null };
   const mean = {} as Record<Metric, number>;
   const deviation = {} as Record<Metric, number>;
   for (const metric of metrics) {

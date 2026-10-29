@@ -48,7 +48,7 @@ test('exposure thresholds are inclusive; unavailable keeps score and never acts'
 
 test('energy calibrates against ten minutes of personal samples and smooths recent observations', () => {
   assert.equal(calibrate([audio(0), audio(500_000)], 500_000).baseline, null);
-  const calibration = calibrate([audio(0), audio(300_000), audio(600_000)], 600_000);
+  const calibration = calibrate(Array.from({ length: 601 }, (_, index) => audio(index * 1000)), 600_000);
   assert.equal(calibration.progress, 1);
   assert.ok(calibration.baseline);
   const baseline = calibration.baseline;

@@ -9,6 +9,7 @@ import type { TagOutEvent } from '../core/tagout.ts';
 import type { AudioFeatures, FrameObservation } from '../core/types.ts';
 import { frameSource, voiceFeatures, syntheticChat, simulatedCrew } from './sources.ts';
 import { createSimEvent } from './events.ts';
+import { advanceRally, initialRally } from '../core/session.ts';
 
 export class DemoSession {
   private step = 0;
@@ -25,6 +26,7 @@ export class DemoSession {
   private curves: { at: number; energy: number; chat: number }[] = [];
   private recentRaids: number[] = [];
   private energy: number | null = 75;
+  private rally = initialRally();
   private baseline;
   constructor(enabled: boolean) {
     if (!enabled) throw new Error('Simulation requires SIM=1');
@@ -63,6 +65,7 @@ export class DemoSession {
     const chat = syntheticChat(true, this.step, this.now);
     this.chats = [...this.chats.filter((item) => this.now - item.at < 60_000), ...chat];
     for (const message of chat) {
+      this.rally = advanceRally(this.rally, message.id, this.now);
       const action = decideModeration(mockChatClassifier(message.fixture));
       if (action === 'delete') this.moderation.push({ id: message.id, action, simulated: true });
     }
@@ -87,7 +90,7 @@ export class DemoSession {
       clues: (this.frames.at(-1)?.clues ?? []).map((clue) => ({ ...clue, description: clueDescriptions[clue.category] })),
       chat: chatVelocity(this.chats, this.now), correlation: correlation(this.curves),
       combinedAlert: combinedAlert(this.energy, this.exposure.score, this.exposure.analysis === 'available'),
-      crew: [this.crew], tagout: this.tagout, timeline: this.timeline, curves: this.curves,
+      rally: { meter: this.rally.meter, celebrating: this.now < this.rally.celebratingUntil }, crew: [this.crew], tagout: this.tagout, timeline: this.timeline, curves: this.curves,
       moderation: this.moderation, events: this.events,
     });
   }

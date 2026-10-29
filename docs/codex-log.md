@@ -56,3 +56,12 @@
 - Connected Chat Guard through the core moderation policy, with bounded classifier concurrency and a SQLite intent/outcome audit by message ID before deletion. The private audit is the mod notice; raw message text is not stored. Added private blocked-term add/remove controls; submitted sensitive terms are not retained by Spotter.
 - Tests added before modules: Responses request contract/refusal, OffTheMap fail-soft/no repeat action/dismissal, OBS capture/restore/closed connection, Chat Guard missing-analysis/no deletion and ID-only audit.
 - Verification: 28 tests pass; typecheck, lint and build pass. No real Twitch/OBS/OpenAI request was exercised; the HUMAN recorded take and credentials remain pending.
+
+## 2026-10-29 — Phase 5 Second Wind implementation, microphone proof pending
+
+- Consulted pitchy and Fastify WebSocket primary docs. Added Web Audio sensor activated only by its button, with processing constraints off, clarity-gated pitch, local spectrum/envelope features and numeric-only WebSocket packets. Stop/pagehide/server disconnect releases microphone tracks; SIM mode refuses mic activation.
+- Added strict numeric packet parser, timestamp/rate/binary/size guards, single sensor connection and forced WebSocket termination on server shutdown.
+- Strengthened calibration coverage after a failing sparse-sample test: ten-minute span plus at least 300 valid windows. Saved numeric baseline, stale-sensor status, recalibration, bounded rolling samples and half-minute aggregate report storage in SQLite.
+- Added pure, tested rally progression separate from energy and pure session report summaries; wired opt-in overlay stamina/rally and combined alert. Added report page and energy/chat curves.
+- Tests added before core/modules: numeric-only contract, sparse calibration, 150 Hz synthetic tone extraction, baseline persistence/staleness, rally separation/dedupe, reports and WebSocket accept/reject. Fixed a 30-second shutdown tail discovered in injected WebSocket testing by terminating sockets during preClose.
+- Verification: 34 tests expected with the new WebSocket test; typecheck/lint/build pass. No real microphone opened, no raw audio recorded/uploaded; real microphone/browser permission and live correlation proof remain HUMAN work.

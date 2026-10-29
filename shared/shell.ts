@@ -6,24 +6,25 @@ const app = document.querySelector<HTMLElement>('#app')!;
 const page = window.location.pathname.split('/')[1] ?? 'dashboard';
 document.body.dataset.page = page;
 const badge = '<strong class="badge" id="simulated" hidden>SIMULATED</strong>';
-const links = '<nav><a href="/dashboard/">Dashboard</a><a href="/sensor/">Sensor</a><a href="/overlay/" target="_blank">OBS overlay ↗</a></nav>';
+const links = '<nav><a href="/dashboard/">Dashboard</a><a href="/dashboard/report.html">Report</a><a href="/sensor/">Sensor</a><a href="/overlay/" target="_blank">OBS overlay ↗</a></nav>';
 if (page === 'dashboard') {
   app.innerHTML = `<header><div><span class="eyebrow">YOUR STREAM. YOUR BACKUP.</span><h1>Spotter<span class="dot">●</span></h1></div>${links}${badge}</header>
     <div class="intro"><div><h2>A little backup goes a long way.</h2><p>Private signals for the person behind the stream.</p></div><span id="connection" class="connection">Connecting…</span></div>
     <div class="demo-controls"><a id="twitch-connect" href="/api/twitch/connect" hidden>Connect with Twitch ↗</a> <button id="reset" hidden>Replay simulated session</button></div><p id="error" role="status" hidden></p><div id="combined" class="alert" role="alert" hidden>Low energy + high exposure. Consider moving or taking a break.</div>
     <section class="grid">
       <article class="card"><span class="eyebrow">01 / OFF THE MAP</span><h2>Know what’s showing.</h2><div class="score"><b id="exposure">—</b><span>/ 100<br>findability</span></div><meter id="exposure-meter" min="0" max="100" value="0"></meter><p id="analysis">analysis unavailable</p><ul id="clues"></ul><button id="dismiss" hidden>Dismiss privacy action</button></article>
-      <article class="card"><span class="eyebrow">02 / SECOND WIND</span><h2>Check your reserve.</h2><div class="score"><b id="energy">—</b><span>/ 100<br>personal energy</span></div><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="calibration">Waiting for numeric audio features</p><p id="chat">Chat activity unavailable</p><p id="correlation">Correlation needs paired stream samples.</p></article>
+      <article class="card"><span class="eyebrow">02 / SECOND WIND</span><h2>Check your reserve.</h2><div class="score"><b id="energy">—</b><span>/ 100<br>personal energy</span></div><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="calibration">Waiting for numeric audio features</p><p id="chat">Chat activity unavailable</p><p id="correlation">Correlation needs paired stream samples.</p><button id="recalibrate" hidden>Recalibrate personal baseline</button></article>
       <article class="card crew"><span class="eyebrow">03 / TAG OUT</span><h2>Your crew has you.</h2><div class="avatar">↗</div><h3 id="partner">No crew connected</h3><p id="raid-phase">idle</p><div class="actions"><button id="approve" hidden>Approve simulated raid</button><button id="cancel" hidden>Cancel raid</button><button id="back" hidden>Request tag back</button></div><p class="muted">Every raid needs a click from its broadcaster.</p></article>
     </section>
     <section id="scene-panel" class="card" hidden><span class="eyebrow">SYNTHETIC SCENE / MOCK VISION · SIMULATED</span><img id="scene" alt="Synthetic street illustration for the mock demo"/><p>Illustrative fixture. Mock clues follow the script; no model interprets these pixels.</p></section><section class="lower"><article class="card"><span class="eyebrow">THIS SESSION</span><h2>Energy meets community.</h2><svg id="curves" viewBox="0 0 600 180" role="img" aria-label="Energy and chat activity over time"><path d="M0 160H600 M0 90H600 M0 20H600" stroke="#334039" fill="none"/></svg><p class="legend"><span>● Energy</span><span>● Chat activity, scaled to session peak</span></p></article>
       <article class="card"><span class="eyebrow">EXPOSURE REPLAY</span><h2>The clues, without the place.</h2><ol id="timeline"></ol><p id="moderation" class="muted">No moderated messages.</p></article></section>
     <section id="terms-panel" class="card" hidden><span class="eyebrow">PRIVATE CHAT GUARD</span><h2>Blocked terms, without the guesswork.</h2><form id="terms-form"><label>Private sensitive term <input id="term" required minlength="2" maxlength="500" autocomplete="off"></label><button>Add to Twitch blocked terms</button></form><ul id="terms"></ul><p>Terms go to Twitch and are not saved in Spotter. Keep the returned ID to remove a term later.</p></section><footer><label><input type="checkbox" id="hud"> Opt in to the public stamina HUD</label><p>Frames aren’t saved. Audio stays local. No location is ever produced.</p></footer>`;
 } else if (page === 'overlay') {
-  app.innerHTML = `${badge}<section id="hud-content" hidden><span class="eyebrow">SPOTTER / SECOND WIND</span><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="raid-phase"></p></section>`;
+  app.innerHTML = `${badge}<section id="hud-content" hidden><span class="eyebrow">SPOTTER / SECOND WIND</span><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="rally"></p><p id="raid-phase"></p></section>`;
 } else {
-  app.innerHTML = `<header><h1>Spotter<span class="dot">●</span></h1>${links}${badge}</header><article class="card"><span class="eyebrow">LOCAL AUDIO SENSOR</span><h2>Your voice stays here.</h2><p>The microphone sensor will be connected in phase 5. This demo uses simulated numeric features and never opens your microphone.</p><p id="error" role="status"></p></article>`;
+  app.innerHTML = `<header><h1>Spotter<span class="dot">●</span></h1>${links}${badge}</header><article class="card"><span class="eyebrow">LOCAL AUDIO SENSOR</span><h2>Your voice stays here.</h2><p>Raw audio stays in this browser. Only numeric features are sent to the local server. Demo mode keeps the microphone closed.</p><button id="mic-start">Enable local microphone</button> <button id="mic-stop" disabled>Stop microphone</button><p id="mic-status" role="status">Stopped. No microphone is open.</p><pre id="mic-features"></pre><p id="error" role="status"></p></article>`;
 }
+if (page === 'sensor') void import('../sensor/main.ts');
 const element = (id: string) => document.getElementById(id);
 const text = (id: string, value: string) => { const target = element(id); if (target) target.textContent = value; };
 const hidden = (id: string, value: boolean) => { const target = element(id); if (target) target.hidden = value; };
@@ -43,6 +44,7 @@ async function post(path: string, payload?: unknown, method = 'POST'): Promise<v
 for (const [id, action] of [['approve', 'approve'], ['cancel', 'cancel'], ['back', 'requestBack'], ['dismiss', 'dismiss'], ['reset', 'reset']]) {
   if (id && action) element(id)?.addEventListener('click', () => { void post(isSimulated ? `/api/demo/${action}` : action === 'dismiss' ? '/api/privacy/dismiss' : `/api/relay/${action}`); });
 }
+element('recalibrate')?.addEventListener('click', () => { void post('/api/calibration/reset'); });
 element('hud')?.addEventListener('change', (event) => { void post('/api/hud', { enabled: (event.target as HTMLInputElement).checked }); });
 element('terms-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -77,12 +79,13 @@ function render(state: Snapshot): void {
   hidden('reset', !state.simulated);
   hidden('scene-panel', !state.simulated);
   hidden('terms-panel', state.simulated);
+  hidden('recalibrate', state.simulated);
   const scene = element('scene');
   if (scene) scene.style.filter = state.exposure.active ? 'blur(12px)' : 'none';
   text('exposure', String(state.exposure.score)); meter('exposure-meter', state.exposure.score);
   text('energy', state.energy === null ? '—' : String(state.energy)); meter('energy-meter', state.energy ?? 0);
   text('analysis', state.analysis !== 'available' ? 'analysis unavailable' : state.exposure.active ? state.simulated ? 'Privacy action active · simulated' : (state as unknown as { actionStatus: string }).actionStatus : state.exposure.score < 60 ? 'no obvious clues detected' : 'Identifying clues detected');
-  text('calibration', state.simulated ? 'Simulated personal baseline · accelerated time' : 'Waiting for numeric audio features');
+  text('calibration', state.simulated ? 'Simulated personal baseline · accelerated time' : `Personal baseline: ${Math.round(state.calibration * 100)}% · ${(state as unknown as { sensorStatus: string }).sensorStatus ?? 'sensor unavailable'}`);
   text('chat', `${state.chat.messagesPerMinute} messages/min · ${state.chat.uniqueChattersPerMinute} unique chatters/min`);
   text('correlation', state.correlation === null ? 'Correlation needs paired stream samples.' : `Energy / chat correlation: ${state.correlation.toFixed(2)} · association, not causation`);
   text('partner', state.crew[0] ? `Crew partner · ${state.crew[0].energy}% energy` : 'No crew connected');
@@ -107,6 +110,7 @@ async function refresh(): Promise<void> {
     hidden('simulated', !state.simulated);
     if (page === 'overlay') {
       hidden('hud-content', !state.enabled); meter('energy-meter', state.energy ?? 0); text('raid-phase', state.phase ?? '');
+      text('rally', state.rally?.celebrating ? 'RALLY! Your community is here for you.' : `Rally ${state.rally?.meter ?? 0}%`);
     } else {
       text('connection', state.simulated ? '● Demo session · accelerated time' : '● Local session · integrations disconnected');
       hidden('twitch-connect', state.simulated);

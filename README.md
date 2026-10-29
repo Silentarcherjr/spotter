@@ -43,3 +43,11 @@ The Responses request uses `store: false`, an in-memory JPEG and a closed generi
 Chat Guard classifies messages only when Twitch and AI are configured. Pure code authorizes high-confidence guessing-message deletion. The private dashboard audit keeps message IDs, timestamps and outcomes; it does not keep message text. Sensitive terms entered in the private form go directly to Twitch blocked terms and are not stored by Spotter. Keep their returned IDs for removal.
 
 References: [Responses structured output](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses), [image input](https://developers.openai.com/api/docs/guides/images-vision), [OBS client](https://github.com/obs-websocket-community-projects/obs-websocket-js).
+
+## Second Wind (microphone proof pending)
+
+Open the sensor page and click **Enable local microphone**. Web Audio requests echo cancellation, noise suppression and automatic gain control off. `pitchy` applies a clarity gate to F0; RMS, pitch median/range, spectral slope, voiced ratio, pause length and a rough envelope-peak speech-rate proxy are calculated in-browser. The WebSocket accepts only the eight numeric fields at approximately one-second intervals; extra keys, binary packets and stale/invalid values close the connection. Stopping, closing the page or losing the server stops the microphone tracks.
+
+Calibration needs ten minutes and at least 300 usable windows. A numeric-only baseline profile is stored locally and can be recalibrated. Keep the sensor page active: browsers may throttle background tabs, and too few frames produce no measurement. Sensor data older than five seconds is shown as unavailable. Energy is a personal heuristic, not a health or fatigue assessment.
+
+The rally meter uses chat messages and never changes measured energy. Enable the public HUD explicitly to show stamina/rally. The [session report](http://127.0.0.1:5173/dashboard/report.html) shows this session's energy/chat curves, peak/low and correlation. Live aggregate points are saved every 30 seconds; raw audio is never recorded or sent. The report currently covers the running server session.

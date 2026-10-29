@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import websocket from '@fastify/websocket';
 import { DatabaseSync } from 'node:sqlite';
 import { DemoSession } from './sim/session.ts';
 import { loadFrameFolder } from './sim/frames.ts';
@@ -12,11 +13,37 @@ import type { AIConfig } from './ai/responses.ts';
 import { OffTheMap } from './modules/offthemap/runtime.ts';
 import { ChatGuard } from './modules/offthemap/chat-guard.ts';
 import { initialTagOut } from './core/tagout.ts';
+import { SecondWind, parseNumericFeatures } from './modules/secondwind/runtime.ts';
+import { combinedAlert } from './core/chat.ts';
+import { sessionReport } from './core/session.ts';
 
 export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; ai?: AIConfig }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
+  app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
+    for (const client of this.websocketServer.clients) client.terminate();
+    done();
+  } });
   const database = new DatabaseSync(options.databasePath);
   database.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  const secondwind = !options.simulated ? new SecondWind(database) : null;
+  let sensorSocket: { close: () => void } | null = null;
+  app.register(async (scope) => {
+    scope.get('/api/sensor', { websocket: true }, (socket) => {
+      if (!secondwind) { socket.close(1008, 'Sensor disabled in simulation'); return; }
+      sensorSocket?.close(); sensorSocket = socket;
+      let lastPacket = 0;
+      socket.on('message', (raw: { toString(): string }, binary: boolean) => {
+        try {
+          const now = Date.now();
+          if (binary || now - lastPacket < 750) throw new Error('Invalid sensor packet');
+          const packet = parseNumericFeatures(JSON.parse(raw.toString()) as unknown, now);
+          secondwind.receive(packet); lastPacket = now;
+          socket.send(JSON.stringify({ accepted: true }));
+        } catch { socket.close(1008, 'Numeric features only, at one-second intervals'); }
+      });
+      socket.on('close', () => { if (sensorSocket === socket) sensorSocket = null; });
+    });
+  });
   let demo = options.simulated ? new DemoSession(true) : null;
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
   const obs = !options.simulated && options.obs ? new ObsClient(options.obs) : null;
@@ -31,6 +58,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     if (!user) throw new Error('Twitch authorization required');
     return twitch.helix.deleteMessage(user, user, id);
   }, notify: async (_id) => { /* Audit is the private mod notice, exposed on the dashboard. */ } }) : null;
+  if (secondwind) twitch?.setActivityHandler((id, at, userId) => secondwind.chat(id, at, userId));
   if (guard) twitch?.setChatHandler((id, message, at) => guard.check(id, message, at));
   let visionTimer: ReturnType<typeof setInterval> | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -45,12 +73,19 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   app.addHook('onClose', async () => { clearInterval(timer); clearInterval(visionTimer); twitch?.stop(); await obs?.stop(); database.close(); });
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    if (!['GET', 'HEAD'].includes(request.method) && request.headers.origin) {
+    if ((!['GET', 'HEAD'].includes(request.method) || request.url === '/api/sensor') && request.headers.origin) {
       const allowed = [`http://127.0.0.1:${process.env.VITE_PORT ?? 5173}`, `http://127.0.0.1:${process.env.PORT ?? 3210}`];
       if (!allowed.includes(request.headers.origin)) return reply.code(403).send({ error: 'Invalid origin' });
     }
   });
-  app.get('/api/overlay', async () => hudEnabled && demo ? { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase } : { simulated: options.simulated, enabled: false });
+  app.get('/api/overlay', async () => {
+    if (!hudEnabled) return { simulated: options.simulated, enabled: false };
+    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, rally: demo.snapshot().rally };
+    const energy = secondwind!.snapshot(Date.now());
+    return { simulated: false, enabled: true, energy: energy.energy, rally: energy.rally, phase: 'idle' };
+  });
+  app.post('/api/calibration/reset', async () => { secondwind?.resetCalibration(); return { reset: true }; });
+  app.get('/api/report', async () => ({ simulated: options.simulated, ...(demo ? sessionReport(demo.snapshot().curves) : secondwind!.report()) }));
   app.post<{ Body: { enabled: boolean } }>('/api/hud', {
     schema: { body: { type: 'object', additionalProperties: false, required: ['enabled'], properties: { enabled: { type: 'boolean' } } } },
   }, async (request) => { hudEnabled = request.body.enabled; return { enabled: hudEnabled }; });
@@ -95,10 +130,11 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   app.post('/api/twitch/disconnect', async () => { twitch?.disconnect(); return { connected: false }; });
   app.get('/api/health', async () => ({ status: 'ok', simulated: options.simulated }));
   app.get('/api/status', async () => demo ? demo.snapshot() : ({
-    simulated: options.simulated,
     analysis: 'analysis unavailable',
     exposure: { score: 0, active: false, dismissed: false, analysis: 'analysis unavailable' },
-    energy: null, calibration: 0, combinedAlert: false, crew: [], tagout: initialTagOut(), curves: [], timeline: [], clues: [],
+    crew: [], tagout: initialTagOut(), timeline: [], clues: [],
+    ...secondwind!.snapshot(Date.now()),
+    combinedAlert: combinedAlert(secondwind!.snapshot(Date.now()).energy, offthemap?.snapshot().exposure.score ?? null, offthemap?.snapshot().analysis === 'available'),
     ...(offthemap?.snapshot() ?? {}),
     moderation: guard?.snapshot().entries ?? [],
     chatGuard: guard?.snapshot().status ?? 'analysis unavailable',

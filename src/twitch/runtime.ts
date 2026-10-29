@@ -17,6 +17,8 @@ export class TwitchRuntime {
   private status = 'authorization required';
   private connected = false;
   private closed = false;
+  private activityHandler: ((id: string, at: number, userId: string) => void) | null = null;
+  setActivityHandler(handler: (id: string, at: number, userId: string) => void): void { this.activityHandler = handler; }
   private chatHandler: ((id: string, message: string, at: number) => Promise<void>) | null = null;
   setChatHandler(handler: (id: string, message: string, at: number) => Promise<void>): void { this.chatHandler = handler; }
   constructor(database: DatabaseSync, config: TwitchConfig) {
@@ -47,6 +49,7 @@ export class TwitchRuntime {
     const id = this.auth.identity?.userId;
     const event = notification.event;
     if (notification.type === 'channel.chat.message' && event.broadcaster_user_id === id && typeof event.message_id === 'string' && typeof event.chatter_user_id === 'string') {
+      this.activityHandler?.(event.message_id, notification.at, event.chatter_user_id);
       const content = event.message as { text?: unknown } | undefined;
       if (typeof content?.text === 'string' && this.chatHandler) void this.chatHandler(event.message_id, content.text, notification.at).catch(() => {});
       this.chats = [...this.chats.filter((chat) => notification.at - chat.at <= 60_000), { id: event.message_id, userId: event.chatter_user_id, at: notification.at }].slice(-10_000);
