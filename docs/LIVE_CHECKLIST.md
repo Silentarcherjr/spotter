@@ -4,8 +4,9 @@ Offline implementation does not establish the real-service definition of done. D
 
 ## Setup
 
-- [ ] Twitch dev app: client ID/secret and localhost redirect URI configured; main and crew test accounts available.
-- [ ] Twitch CLI installed using the [official instructions](https://dev.twitch.tv/docs/cli/). Produce fixture events with `event trigger` and exercise `mock-api`; sanitize tokens/text before committing captures. Existing automated fixtures are synthetic documentation shapes.
+- [x] Twitch dev app configured and primary account authorized with the six required scopes. Crew authorization remains separate.
+- [x] Twitch CLI 1.1.24 installed; raid and online/offline fixtures generated with `event trigger --no-config` and fake IDs. CLI does not support chat; that fixture is a redacted controlled live EventSub event. See test/fixtures/twitch/README.md.
+- [x] CLI mock-api server smoke: started locally on port 8087; GET /units/users returned 200 with 25 generated mock users; stopped afterward. This does not claim authenticated mock Helix endpoint coverage.
 - [x] OBS WebSocket authenticated; `npm run obs:setup` created and read back `Main`/`Privacy`, looped media and 1080p browser sources. A real rerun created no duplicates. `.env` uses scene-switch privacy with no blur filter. Automatic privacy/restore recording below remains pending.
 - [ ] OpenAI key and compatible image/Structured Outputs model set in `.env`.
 - [ ] Owned IRL footage and voice media available; avoid identifiable bystanders.
@@ -20,11 +21,14 @@ Offline implementation does not establish the real-service definition of done. D
 
 ## Record real flows
 
-- [ ] Authorize Twitch; dashboard chat rate reflects real messages. Restart and verify token validation/refresh and EventSub recovery.
+- [x] Primary OAuth authorization and real EventSub chat verified: a controlled API-sent message appeared as 1 message/min and 1 unique chatter/min on the dashboard. Channel offline; no simulation source used.
+- [x] Restarted Spotter: stored authorization validated and real EventSub reconnected without repeating OAuth.
+- [ ] Observe real expiry-driven token refresh and keepalive/network-failure recovery; these are covered by offline tests but were not forced in this live check.
 - [ ] Play owned footage in OBS. Generic clues increase the private score, privacy scene/filter applies, marker appears. Confirm no frame files are produced and overlay exposes no clue/score.
 - [ ] Dismiss privacy and verify the exact previous scene/filter state. Close OBS and confirm the server survives and shows analysis unavailable without a new action.
-- [ ] Add a private blocked term; verify Twitch blocks it and the returned ID can remove it.
-- [ ] Manually post a controlled guessing test message on your test channel; observe deletion and the private ID/outcome audit. Verify model failure causes no deletion.
+- [x] Added an artificial temporary blocked term through Spotter; from a non-moderator secondary account Twitch AutoMod displayed that the comment was held and not published. Removed the term through Spotter, then resent the same text: it reached EventSub as normal chat. Screenshots remain private in data/.
+- [x] Sent a controlled location-guessing test without any actual place/name/address from the secondary account. Chat Guard deleted it; Twitch displayed the deletion and the private audit recorded action=delete, simulated=false, with ID/time only. No real chat text was persisted by the app.
+- [ ] Force a real model failure and verify no live deletion; this fail-soft condition is covered by offline regression tests, not exercised against the live provider here.
 - [ ] Explicitly enable the microphone; inspect numeric-only WebSocket packets. Calibrate with natural speaking for ten minutes, verify saved baseline, stop/disconnect behavior and missing-sensor display.
 - [ ] Compare measured energy and real chat curves; verify rally never changes energy. Enable/disable HUD and check transparency/visibility in OBS.
 - [ ] Configure the second local instance, separate database/ports and partner OAuth token. Each crew endpoint must expose only energy/live after its shared secret.

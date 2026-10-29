@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { redactChatFixture } from '../src/twitch/proof.ts';
 import { DatabaseSync } from 'node:sqlite';
 import { TwitchAuth } from '../src/twitch/auth.ts';
 import { Helix } from '../src/twitch/helix.ts';
@@ -13,7 +15,7 @@ test('OAuth state is expiring and single-use; tokens remain in local SQLite; ref
   const calls: URL[] = [];
   const fetcher: typeof fetch = async (input, init) => {
     const url = new URL(String(input)); calls.push(url);
-    if (url.pathname.endsWith('/validate')) return json({ user_id: 'main', client_id: 'client', scopes: ['user:read:chat'], expires_in: 3600 });
+    if (url.pathname.endsWith('/validate')) return json({ user_id: '100', client_id: 'client', scopes: ['user:read:chat'], expires_in: 3600 });
     const body = new URLSearchParams(init?.body as string);
     if (body.get('grant_type') === 'refresh_token') refreshes++;
     return json({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 3600, scope: ['user:read:chat'] });
@@ -26,7 +28,7 @@ test('OAuth state is expiring and single-use; tokens remain in local SQLite; ref
     await assert.rejects(auth.exchange('code', 'wrong-state', 1));
     await auth.exchange('code', url.searchParams.get('state')!, 1);
     await assert.rejects(auth.exchange('code', url.searchParams.get('state')!, 2));
-    assert.equal(auth.identity?.userId, 'main');
+    assert.equal(auth.identity?.userId, '100');
     await Promise.all([auth.refresh(), auth.refresh(), auth.refresh()]);
     assert.equal(refreshes, 1);
     assert.equal(await auth.accessToken(), 'fake-access');
@@ -40,20 +42,20 @@ test('Helix uses fetch with correct body/query and never turns missing message I
   const calls: { url: URL; init: RequestInit | undefined }[] = [];
   const fetcher: typeof fetch = async (url, init) => { calls.push({ url: new URL(String(url)), init }); return init?.method === 'DELETE' ? new Response(null, { status: 204 }) : json({ data: [] }); };
   const helix = new Helix('client', async () => 'fake-access', fetcher);
-  await helix.sendChat('main', 'main', 'test message');
-  await helix.marker('main');
-  await helix.addBlockedTerm('main', 'main', 'test-only phrase');
-  await helix.removeBlockedTerm('main', 'main', 'term-id');
-  await helix.deleteMessage('main', 'main', 'message-id');
-  assert.throws(() => helix.deleteMessage('main', 'main', ''));
-  await helix.startRaid('main', 'partner');
-  await helix.cancelRaid('main');
+  await helix.sendChat('100', '100', 'test message');
+  await helix.marker('100');
+  await helix.addBlockedTerm('100', '100', 'test-only phrase');
+  await helix.removeBlockedTerm('100', '100', 'term-id');
+  await helix.deleteMessage('100', '100', 'message-id');
+  assert.throws(() => helix.deleteMessage('100', '100', ''));
+  await helix.startRaid('100', 'partner');
+  await helix.cancelRaid('100');
   assert.equal(calls[4]?.url.searchParams.get('message_id'), 'message-id');
   assert.equal(calls[5]?.url.searchParams.get('to_broadcaster_id'), 'partner');
   assert.equal(calls[6]?.init?.method, 'DELETE');
   assert.ok(calls.every((call) => new Headers(call.init?.headers).get('Authorization') === 'Bearer fake-access'));
   const failing = new Helix('client', async () => 'fake-access', async () => json({ message: 'private detail' }, 429));
-  await assert.rejects(failing.marker('main'), (error: unknown) => error instanceof Error && !error.message.includes('private detail') && error.message.includes('429'));
+  await assert.rejects(failing.marker('100'), (error: unknown) => error instanceof Error && !error.message.includes('private detail') && error.message.includes('429'));
 });
 
 class Socket extends EventTarget {
@@ -62,7 +64,9 @@ class Socket extends EventTarget {
   message(value: unknown) { this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(value) })); }
 }
 const welcome = (id: string) => ({ metadata: { message_id: `welcome-${id}`, message_type: 'session_welcome' }, payload: { session: { id, keepalive_timeout_seconds: 10 } } });
-const notification = { metadata: { message_id: 'chat-event', message_type: 'notification', subscription_type: 'channel.chat.message' }, payload: { subscription: { type: 'channel.chat.message' }, event: { broadcaster_user_id: 'main', chatter_user_id: 'viewer', message_id: 'message-id', message: { text: 'test message' } } } };
+const fixture = async (name: string) => JSON.parse(await readFile(new URL(`./fixtures/twitch/${name}.json`, import.meta.url), 'utf8'));
+const chatFixture = await fixture('channel.chat.message');
+const notification = { metadata: { message_id: 'chat-event', message_type: 'notification', subscription_type: chatFixture.type }, payload: { subscription: { type: chatFixture.type }, event: chatFixture.event } };
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 test('EventSub immediately subscribes, dedupes and migrates reconnects without resubscribing', async () => {
@@ -86,8 +90,8 @@ test('EventSub immediately subscribes, dedupes and migrates reconnects without r
   assert.deepEqual(sessions, ['one']);
   assert.equal(sockets[0]!.closed, true);
   assert.equal(urls.length, 2);
-  assert.equal(subscriptions('main', 'main').length, 5);
-  assert.equal(subscriptions('main', 'main').filter((subscription) => subscription.type === 'channel.raid').length, 2);
+  assert.equal(subscriptions('100', '100').length, 5);
+  assert.equal(subscriptions('100', '100').filter((subscription) => subscription.type === 'channel.raid').length, 2);
   client.stop();
 });
 
@@ -115,7 +119,7 @@ test('live runtime reduces chat to IDs and aggregates without retaining message 
   try {
     // Authorize through a mocked exchange so the runtime has a verified channel identity.
     const auth = runtime.auth;
-    const configFetcher: typeof fetch = async (input) => String(input).endsWith('/validate') ? json({ client_id: 'client', user_id: 'main', scopes: ['user:read:chat'] }) : json({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 3600 });
+    const configFetcher: typeof fetch = async (input) => String(input).endsWith('/validate') ? json({ client_id: 'client', user_id: '100', scopes: ['user:read:chat'] }) : json({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 3600 });
     const authWithMock = new TwitchAuth(db, { clientId: 'client', clientSecret: 'fake-secret', redirectUri: 'http://localhost/callback', fetcher: configFetcher });
     const url = new URL(authWithMock.authorizeUrl());
     await authWithMock.exchange('code', url.searchParams.get('state')!);
@@ -123,9 +127,38 @@ test('live runtime reduces chat to IDs and aggregates without retaining message 
     ready.receive({ type: 'channel.chat.message', at: 1_000, event: notification.payload.event });
     ready.receive({ type: 'channel.chat.message', at: 1_000, event: notification.payload.event });
     assert.equal(ready.snapshot(1_001).chat.messagesPerMinute, 1);
-    assert.ok(!JSON.stringify(ready.snapshot()).includes('test message'));
+    assert.ok(!JSON.stringify(ready.snapshot()).includes('Spotter fixture message'));
     ready.disconnect();
     assert.equal(ready.snapshot(1_001).chat.messagesPerMinute, 0);
     assert.equal(auth.identity, null);
   } finally { runtime.stop(); db.close(); }
+});
+
+test('CLI-generated raid and online/offline payloads pass through the WebSocket decoder', async () => {
+  const socket = new Socket(); const events: { type: string; event: Record<string, unknown> }[] = [];
+  const client = new EventSubClient({ subscribe: async () => {}, onStatus: () => {}, onEvent: (event) => { events.push(event); }, createSocket: () => socket });
+  try {
+    client.start(); socket.message(welcome('cli-fixtures')); await settle();
+    for (const type of ['channel.raid', 'stream.online', 'stream.offline']) {
+      const payload = await fixture(type);
+      socket.message({ metadata: { message_id: `cli-${type}`, message_type: 'notification', message_timestamp: payload.subscription.created_at }, payload });
+    }
+    await settle();
+    assert.deepEqual(events.map((event) => event.type), ['channel.raid', 'stream.online', 'stream.offline']);
+    assert.equal(events[0]!.event.from_broadcaster_user_id, '200');
+    assert.equal(events[0]!.event.to_broadcaster_user_id, '100');
+    assert.equal(events[1]!.event.type, 'live');
+    assert.equal(events[2]!.event.broadcaster_user_id, '100');
+  } finally { client.stop(); }
+});
+
+test('captured chat fixture redaction preserves structure and never retains raw identity/text strings', () => {
+  const captured = { broadcaster_user_id: 'private-id', broadcaster_user_login: 'private-login', chatter_user_name: 'private-name', message_id: 'private-message-id', message: { text: 'private message', fragments: [{ type: 'text', text: 'private message', mention: null }] }, extra: 'private-extra', reply: null };
+  const redacted = redactChatFixture(captured) as typeof captured;
+  assert.deepEqual(Object.keys(redacted), Object.keys(captured));
+  assert.doesNotMatch(JSON.stringify(redacted), /private/);
+  assert.equal(redacted.broadcaster_user_id, '100');
+  assert.equal(redacted.message.fragments[0]!.type, 'text');
+  assert.equal(redacted.message.text, 'Spotter fixture message');
+  assert.equal(redacted.reply, null);
 });

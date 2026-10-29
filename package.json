@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "calibrate": "node --experimental-strip-types --env-file-if-exists=.env scripts/calibrate.ts",
-    "obs:setup": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-setup.ts"
+    "obs:setup": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-setup.ts",
+    "twitch:fixtures": "node --experimental-strip-types scripts/twitch-fixtures.ts",
+    "twitch:proof": "node --experimental-strip-types --env-file-if-exists=.env scripts/twitch-proof.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

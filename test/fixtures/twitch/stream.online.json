@@ -1,0 +1,25 @@
+{
+  "subscription": {
+    "id": "fixture-stream.online-sub",
+    "status": "enabled",
+    "type": "stream.online",
+    "version": "1",
+    "condition": {
+      "broadcaster_user_id": "100"
+    },
+    "transport": {
+      "method": "webhook",
+      "callback": "null"
+    },
+    "created_at": "2026-10-29T12:00:00Z",
+    "cost": 0
+  },
+  "event": {
+    "id": "53983494",
+    "broadcaster_user_id": "100",
+    "broadcaster_user_login": "testBroadcaster",
+    "broadcaster_user_name": "testBroadcaster",
+    "type": "live",
+    "started_at": "2026-10-29T12:00:00Z"
+  }
+}

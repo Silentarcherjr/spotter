@@ -1,0 +1,44 @@
+{
+  "type": "channel.chat.message",
+  "event": {
+    "broadcaster_user_id": "100",
+    "broadcaster_user_login": "fixturebroadcaster",
+    "broadcaster_user_name": "Fixture Broadcaster",
+    "source_broadcaster_user_id": null,
+    "source_broadcaster_user_login": null,
+    "source_broadcaster_user_name": null,
+    "chatter_user_id": "200",
+    "chatter_user_login": "fixtureviewer",
+    "chatter_user_name": "Fixture Viewer",
+    "message_id": "00000000-0000-4000-8000-000000000001",
+    "source_message_id": null,
+    "is_source_only": null,
+    "message": {
+      "text": "Spotter fixture message",
+      "fragments": [
+        {
+          "type": "text",
+          "text": "Spotter fixture message",
+          "cheermote": null,
+          "emote": null,
+          "mention": null,
+          "gif": null
+        }
+      ]
+    },
+    "color": "",
+    "badges": [
+      {
+        "set_id": "[redacted]",
+        "id": "[redacted]",
+        "info": ""
+      }
+    ],
+    "source_badges": null,
+    "message_type": "text",
+    "cheer": null,
+    "reply": null,
+    "channel_points_custom_reward_id": null,
+    "channel_points_animation_id": null
+  }
+}
