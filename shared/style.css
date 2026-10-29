@@ -1,0 +1,10 @@
+:root { color-scheme: dark; font: 17px/1.6 system-ui, sans-serif; color: #e8edf7; background: #10151f; }
+body { margin: 0; }
+main { max-width: 1000px; margin: 4rem auto; padding: 2rem; }
+h1 { font-size: 2rem; }
+.badge { color: #10151f; background: #ffd37b; padding: .25rem .6rem; border-radius: .3rem; }
+[hidden] { display: none !important; }
+body[data-page="overlay"] { background: transparent; }
+:root:has(body[data-page="overlay"]) { background: transparent; }
+body[data-page="overlay"] main { margin: 1rem; padding: 1rem; max-width: 22rem; }
+body[data-page="overlay"] h1, body[data-page="overlay"] p { display: none; }
