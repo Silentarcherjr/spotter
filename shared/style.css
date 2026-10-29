@@ -1,10 +1,41 @@
-:root { color-scheme: dark; font: 17px/1.6 system-ui, sans-serif; color: #e8edf7; background: #10151f; }
+:root { color-scheme: dark; font: 15px/1.6 system-ui, sans-serif; color: #e5ebe3; background: #101712; }
+* { box-sizing: border-box; }
 body { margin: 0; }
-main { max-width: 1000px; margin: 4rem auto; padding: 2rem; }
-h1 { font-size: 2rem; }
-.badge { color: #10151f; background: #ffd37b; padding: .25rem .6rem; border-radius: .3rem; }
+main { max-width: 1440px; margin: auto; padding: 2.4rem 3.5rem; }
+header { display: flex; align-items: center; gap: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #344039; }
+h1 { font-size: 2.3rem; letter-spacing: -.1rem; line-height: 1.1; margin: .3rem 0; }
+h2 { font-size: 1.4rem; letter-spacing: -.04rem; margin: .8rem 0; font-weight: 550; }
+h3 { font-size: 1.2rem; }
+p { color: #a7b3a8; }
+.dot { color: #b6ef89; font-size: 1rem; padding-left: .4rem; vertical-align: top; }
+.eyebrow { font-size: .65rem; letter-spacing: .16rem; font-weight: 700; color: #adbdad; }
+nav { display: flex; gap: 1.5rem; margin-left: auto; }
+a { color: #c4d0c3; text-decoration: none; }
+a:hover { color: #b6ef89; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #b6ef89; outline-offset: 4px; }
+.badge { font-size: .7rem; color: #151c13; background: #f4cc78; padding: .25rem .6rem; border-radius: .25rem; letter-spacing: .07rem; }
+.intro { display: flex; justify-content: space-between; align-items: center; margin: 2rem 0; }
+.intro h2 { font-size: 2rem; margin-bottom: 0; }.intro p { margin-top: .4rem; }
+.connection { color: #b6ef89; font-size: .8rem; }.grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
+.card { background: #1b251e; border: 1px solid #364339; border-radius: .75rem; padding: 1.65rem; min-width: 0; }
+.score { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; }
+.score b { font-size: 4.7rem; letter-spacing: -.3rem; line-height: 1; font-weight: 500; }.score span { font-size: .8rem; line-height: 1.5; color: #a7b3a8; }
+meter { display: block; width: 100%; height: 1rem; accent-color: #b6ef89; }
+li { color: #bac6bb; font-size: .85rem; padding: .25rem 0; }ul, ol { padding-left: 1.15rem; }
+button { font: inherit; border: 1px solid #a2c587; background: #b6ef89; color: #14200f; border-radius: .35rem; padding: .55rem .8rem; cursor: pointer; }
+button:hover { background: #caff9d; }.actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.avatar { margin-top: 1.7rem; width: 4.5rem; height: 4.5rem; display: grid; place-items: center; background: #454e38; border-radius: 50%; font-size: 2rem; color: #d5ecaa; }
+.muted { font-size: .8rem; color: #a2afa3; }.lower { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.25rem; margin-top: 1.25rem; }
+svg { width: 100%; height: auto; margin-top: 1rem; }.legend { display: flex; gap: 1.5rem; font-size: .75rem; }.legend span:first-child { color: #b6ef89; }.legend span:last-child { color: #adadf4; }
+footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 2rem; font-size: .8rem; }footer input { accent-color: #b6ef89; }
+.alert, #error:not(:empty) { padding: .85rem 1rem; border: 1px solid #f4cc78; color: #f4cc78; background: #39311e; margin-bottom: 1rem; border-radius: .4rem; }
 [hidden] { display: none !important; }
-body[data-page="overlay"] { background: transparent; }
-:root:has(body[data-page="overlay"]) { background: transparent; }
-body[data-page="overlay"] main { margin: 1rem; padding: 1rem; max-width: 22rem; }
-body[data-page="overlay"] h1, body[data-page="overlay"] p { display: none; }
+:root:has(body[data-page="overlay"]), body[data-page="overlay"] { background: transparent; }
+body[data-page="overlay"] main { margin: 1.5vw; padding: 1rem; max-width: 25vw; background: #142019e8; border-radius: .6rem; }
+body[data-page="overlay"] .badge { display: inline-block; margin-bottom: .75rem; }
+body[data-page="overlay"] #hud-content p { font-size: .85rem; }
+@media (max-width: 950px) { main { padding: 1.5rem; }.grid { grid-template-columns: 1fr; }.lower { grid-template-columns: 1fr; }header, .intro, footer { align-items: flex-start; flex-wrap: wrap; }nav { margin-left: 0; }.intro h2 { font-size: 1.5rem; } }
+
+.demo-controls { margin-bottom: 1rem; }
+#scene-panel { margin-top: 1.25rem; }
+#scene { width: 100%; max-height: 200px; object-fit: cover; border-radius: .4rem; margin-top: 1rem; }

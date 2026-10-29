@@ -132,3 +132,11 @@ test('Tag Out supports cancellation and failure without stuck approval or accide
   assert.deepEqual(step(canceled.state, { type: 'approve' }).actions, []);
   assert.equal(step(pending, { type: 'failed' }).state.phase, 'suggested');
 });
+
+test('moderation acts only on available high-confidence observations', async () => {
+  const { decideModeration } = await import('../src/core/moderation.ts');
+  assert.equal(decideModeration(null), 'none');
+  assert.equal(decideModeration({ guessing: true, confidence: .79 }), 'none');
+  assert.equal(decideModeration({ guessing: true, confidence: .95 }), 'delete');
+  assert.equal(decideModeration({ guessing: false, confidence: 1 }), 'none');
+});

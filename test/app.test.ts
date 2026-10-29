@@ -11,8 +11,8 @@ for (const simulated of [false, true]) {
       assert.deepEqual(health.json(), { status: 'ok', simulated });
       const status = await app.inject('/api/status');
       assert.equal(status.json().simulated, simulated);
-      assert.equal(status.json().analysis, 'analysis unavailable');
-      assert.deepEqual(status.json().connected, { twitch: false, obs: false, ai: false });
+      assert.equal(status.json().analysis, simulated ? 'available' : 'analysis unavailable');
+      if (!simulated) assert.deepEqual(status.json().connected, { twitch: false, obs: false, ai: false });
     } finally { await app.close(); }
   });
 }

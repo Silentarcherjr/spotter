@@ -26,3 +26,13 @@
 - Added the vision contract in src/ai/vision-contract.ts. Descriptions are an allowlist of generic phrases; runtime parsing drops descriptions entirely and rejects extra fields, literal text, invalid severity/confidence or category/description mismatch. Recursive schema regression forbids location/text keys and open objects.
 - Added a gated simulation event factory in src/sim/events.ts; simulated:false cannot override the mandatory true flag.
 - Verification: 14 tests pass (11 core/contract tests plus 3 scaffold tests); typecheck and lint pass. No live integrations or automatic external actions performed.
+
+## 2026-10-29 — Phase 2 key-free scripted simulation
+
+- Added gated synthetic frame/chat/audio/crew sources, bounded image-folder loading and an owned synthetic SVG fixture. Mock vision and chat classifier live in src/ai; observations drive pure core decisions.
+- Added DemoSession with accelerated virtual time, ten-minute simulated baseline, combined alert, exposure replay, reversible simulated blur, moderation IDs, and separate click approvals for raid and tag back. No live integrations are called.
+- Added simulation-only API controls, reset, in-memory image preview, one-second UI polling and a separate opt-in overlay endpoint that never exposes findability/clues.
+- Built local dashboard/overlay/sensor pages using the Sites skill's local-only workflow; no hosted Site or deployment was created. Sensor explicitly states microphone work is pending.
+- Browser QA: observed SIMULATED badge, approved raid → covered → request tag back → second approval → home; enabled HUD and verified the overlay exposes only energy/relay phase. Screenshot saved to /private/tmp/spotter-demo-dashboard.png.
+- Bugs found: an unnecessary CSS data import broke Vite. Expanded the startup regression to fetch both compiled CSS and TS assets, observed failure, then removed the import.
+- Verification: 19 tests pass; typecheck, lint and production build pass. Existing image fixtures are read into memory, never captured/stored by the model path. Real demo media, real Twitch/OBS/AI and live microphone remain pending.

@@ -30,6 +30,10 @@ test('development command boots all pages and stops both processes', { timeout: 
       assert.equal(response.status, 200);
       assert.match(await response.text(), /Spotter/);
     }
+    for (const asset of ['shared/style.css', 'shared/shell.ts']) {
+      const response = await fetch(`http://127.0.0.1:5189/${asset}`);
+      assert.equal(response.status, 200, `${asset} must compile`);
+    }
   } finally {
     child.kill('SIGTERM');
     await exited;
