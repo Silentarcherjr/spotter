@@ -103,9 +103,9 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   });
   app.get('/api/overlay', async () => {
     if (!hudEnabled) return { simulated: options.simulated, enabled: false };
-    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, rally: demo.snapshot().rally, coveringFor: demo.snapshot().tagout.phase === 'covered' ? 'Main streamer' : null };
+    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, returning: demo.snapshot().tagout.returning, rally: demo.snapshot().rally, coveringFor: demo.snapshot().tagout.phase === 'covered' ? 'Main streamer' : null };
     const energy = secondwind!.snapshot(Date.now());
-    return { simulated: false, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', coveringFor: tagout?.snapshot(Date.now()).coveringFor ? twitch?.displayName(tagout.snapshot(Date.now()).coveringFor!) : null };
+    return { simulated: false, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', returning: tagout?.snapshot(Date.now()).tagout.returning ?? false, coveringFor: tagout?.snapshot(Date.now()).coveringFor ? twitch?.displayName(tagout.snapshot(Date.now()).coveringFor!) : null };
   });
   app.get('/api/crew/status', async (request, reply) => {
     if (!options.crewToken || request.headers.authorization !== `Bearer ${options.crewToken}` || !secondwind) return reply.code(401).send({ error: 'Crew authorization required' });

@@ -46,6 +46,40 @@ No `.env` or credentials are needed. `SIM=1` disables all live integrations and 
 
 The default image is our synthetic SVG fixture. Mock clues follow the deterministic script; no model interprets those pixels. The initial chat window is warmed up so the report correctly compares 20 → 12 messages/min (−40%). Set `SIM_FRAME_DIR` to owned JPEG/PNG/SVG fixtures to replace the illustration: 1–20 images, at most 2 MB each and 20 MB total. Existing fixtures are read into memory; captured/model frames are never written to disk. Real IRL and voice media are pending.
 
+## Broadcast design
+
+The private dashboard has a smoothly animated exposure dial, keyed clue chips that enter only when new evidence arrives, a visible privacy wipe/shield and a game-style segmented stamina reserve. Rally stays separate from measured energy. The relay baton waits for approval, travels while a raid is pending, lands only after confirmation and reverses for tag back. Privacy visuals use the actual applied state in live mode; an unavailable action cannot display an applied shield.
+
+The OBS HUD has its own entry point and reads only `/api/overlay`. It shows opted-in stamina/rally and relay state, never exposure, clue chips or a privacy indicator. Its background is transparent at 1920×1080 and 1280×720. Both views preserve SIMULATED labels and respect reduced-motion preferences. Click Replay to record the sequence again.
+
+## Calibrate real vision with a local video — no OBS
+
+Use the existing `ffmpeg` and `ffprobe` commands (both are required on PATH). Configure `OPENAI_API_KEY`, `OPENAI_MODEL` and `OPENAI_VISION_DETAIL` in `.env`, then run:
+
+```sh
+npm run calibrate -- --video "/absolute/path/to/owned-irl-clip.mp4" --interval 4 --max-frames 120 --output data/irl-calibration
+```
+
+Alternatively set `VISION_VIDEO_PATH` in `.env` and omit `--video`. The command samples every four seconds by default at 768px width, matching the OBS capture width. `--interval` accepts at least one second; `--max-frames` defaults to 120 and caps API calls. It analyzes **sampled frames**, not every original video frame. Each sample makes a billable real vision request unless explicitly using the mock mode below. No new npm dependency was added.
+
+The original clip stays local. JPEGs go from ffmpeg stdout to memory and then to the same `ResponsesAI.vision` contract used by OBS, with `store: false`. No extracted image is written to disk; audio is neither sent nor recorded. The mode instantiates no OBS/Twitch client and executes no automatic action. Captured output is labelled **SIMULATED · REAL VISION** because the input is prerecorded, even though the model analysis is real.
+
+Reports are private files under ignored `data/` by default:
+
+- `irl-calibration.json`: configured model/detail/thresholds, media duration, sampling interval/cap, and every sampled frame's score, availability, generic categories, severity/confidence and hypothetical core requests.
+- `irl-calibration.csv`: compact per-sample score log, with media timestamps in milliseconds.
+- `irl-calibration.html`: standalone chart/table with warning/action lines for threshold inspection.
+
+The reports contain no images, raw model text or source filename/path. Missing/refused/timed-out vision retains the last score and records `analysis unavailable` with no hypothetical action. Hypothetical requests represent core state transitions, not actions repeatedly executed at every high-score frame. Inspect the sample rows and adjust `EXPOSURE_WARN`/`EXPOSURE_ACT` in `.env`, then repeat; the tool does not declare or infer a location. Check the CLI's limit notice / JSON `capped` flag when a long clip exceeds the sample cap. Keep reports private.
+
+For a key-free smoke check only, use explicit mock vision:
+
+```sh
+SIM=1 npm run calibrate -- --mock --video "/absolute/path/to/clip.mp4" --max-frames 3 --output data/mock-calibration
+```
+
+That output is labelled SIMULATED · MOCK VISION. The integration test generates an owned silent synthetic video, extracts JPEGs in memory and verifies that only video input plus JSON/CSV/HTML reports exist afterward. Your real IRL clip and real API call have not been exercised yet.
+
 ## Twitch
 
 Register an app with the exact redirect URI `http://localhost:3210/api/twitch/callback`. Set `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` and `TWITCH_REDIRECT_URI` in `.env`, start `npm run dev` and click **Connect with Twitch**. OAuth uses expiring, single-use state. Tokens remain in the ignored local SQLite database, are validated at startup/hourly and refreshed server-side. Server-created data uses owner-only permissions; protect `.env` too.
@@ -56,7 +90,7 @@ Offline fixtures are synthetic shapes based on official docs, **not CLI captures
 
 ## Off the Map
 
-Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples 768px JPEGs every four seconds.
+Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples 768px JPEGs every four seconds.
 
 The schema contains clue categories, generic allowlisted descriptions, severity and confidence. Runtime parsing rejects extra fields, literal text, invalid values, refusals and incomplete responses. Core scoring combines distinct categories over time with decay. Configure `EXPOSURE_WARN`/`EXPOSURE_ACT` (defaults 60/80). A warning stays private; an action applies privacy and requests a marker. Missing analysis retains the score and cannot trigger an action. Dismiss restores the previous scene/filter state; restoration failure remains retryable.
 
@@ -115,7 +149,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**45 automated tests** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**53 automated tests (53 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

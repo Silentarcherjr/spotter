@@ -11,6 +11,13 @@ Offline implementation does not establish the real-service definition of done. D
 - [ ] Owned IRL footage and voice media available; avoid identifiable bystanders.
 - [x] Codex session ID recorded from the current thread environment in CODEX_SESSION.md.
 
+## Local video calibration before OBS
+
+- [ ] Ensure `ffmpeg` and `ffprobe` are available on PATH (already present on the development host).
+- [ ] Set `OPENAI_VISION_DETAIL=high` and the real API key/model in `.env`.
+- [ ] Run `npm run calibrate -- --video "/absolute/path/to/owned-clip.mp4" --output data/irl-calibration`; review the private HTML/CSV/JSON score report. All sampled frames use media timestamps; JPEGs stay in memory. Check whether the sample cap was reached.
+- [ ] Inspect unavailable rows separately from valid low scores, compare threshold crossings, adjust `.env` warning/action thresholds and repeat as needed. This prerecorded input is labelled SIMULATED · REAL VISION and executes no OBS/Twitch action.
+
 ## Record real flows
 
 - [ ] Authorize Twitch; dashboard chat rate reflects real messages. Restart and verify token validation/refresh and EventSub recovery.

@@ -74,3 +74,13 @@ test('demo report compares complete chat windows so the scripted decline is accu
   assert.equal(curves[0]?.chat, 20);
   assert.equal(curves.at(-1)?.chat, 12);
 });
+
+test('public HUD has a closed presentation payload without exposure clues scores or privacy state', async () => {
+  const app = createApp({ databasePath: ':memory:', simulated: true });
+  try {
+    await app.inject({ method: 'POST', url: '/api/hud', payload: { enabled: true } });
+    const hud = (await app.inject('/api/overlay')).json() as Record<string, unknown>;
+    assert.deepEqual(Object.keys(hud).toSorted(), ['coveringFor', 'enabled', 'energy', 'phase', 'rally', 'returning', 'simulated']);
+    assert.doesNotMatch(JSON.stringify(hud), /exposure|clues|score|privacy|analysis/);
+  } finally { await app.close(); }
+});

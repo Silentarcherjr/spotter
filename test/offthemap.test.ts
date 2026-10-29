@@ -89,3 +89,20 @@ test('exposure warning/action thresholds are configurable and validated before s
   await module.sample(0);
   assert.equal(actions, 1);
 });
+
+for (const detail of [undefined, 'low', 'high', 'auto'] as const) {
+  test(`vision detail ${detail ?? 'default'} is sent to Responses`, async () => {
+    let actual: unknown;
+    const ai = new ResponsesAI({ key: 'fake-key', model: 'configured-model', ...(detail ? { detail } : {}), fetcher: async (_url, init) => {
+      const body = JSON.parse(init?.body as string) as { input: { content: { detail: string }[] }[] };
+      actual = body.input[0]?.content[0]?.detail;
+      return completed({ clues: [] });
+    } });
+    await ai.vision('data:image/jpeg;base64,AA==');
+    assert.equal(actual, detail ?? 'high');
+  });
+}
+
+test('invalid vision detail is rejected before any network call', () => {
+  assert.throws(() => new ResponsesAI({ key: 'fake-key', model: 'configured-model', detail: 'invalid' as 'high' }));
+});

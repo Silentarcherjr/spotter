@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "dashboard/**/*.ts", "overlay/**/*.ts", "sensor/**/*.ts", "shared/**/*.ts", "test/**/*.ts", "vite.config.ts"]
+  "include": ["src/**/*.ts", "dashboard/**/*.ts", "overlay/**/*.ts", "sensor/**/*.ts", "shared/**/*.ts", "test/**/*.ts", "vite.config.ts", "scripts/**/*.ts"]
 }

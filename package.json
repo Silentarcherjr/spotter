@@ -12,7 +12,8 @@
     "demo": "node scripts/dev.mjs --demo",
     "lint": "node scripts/lint.mjs",
     "typecheck": "tsc --noEmit",
-    "build": "vite build"
+    "build": "vite build",
+    "calibrate": "node --experimental-strip-types --env-file-if-exists=.env scripts/calibrate.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",
