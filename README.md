@@ -33,3 +33,13 @@ The dashboard can receive live chat activity via native WebSocket EventSub. Heli
 Offline Twitch tests use hand-written shapes based on the official documentation, not Twitch CLI captures. The CLI is not installed here. The human verification checklist still requires installing it, collecting `twitch event trigger` / `twitch mock-api` fixtures, and proving chat on a live test channel. Never put real tokens or sensitive chat text in fixtures.
 
 Implementation references: [OAuth](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/), [EventSub WebSocket](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/), [subscriptions](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/), [Helix](https://dev.twitch.tv/docs/api/reference/).
+
+## Off the Map (live proof pending)
+
+Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model that supports image input and strict Structured Outputs. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter instead of the privacy scene. With these configured, `npm run dev` samples at four-second intervals. Missing OBS/AI data retains the last score and cannot trigger an action. The dashboard's dismiss button restores the previous scene/filter state; retry if OBS is unavailable.
+
+The Responses request uses `store: false`, an in-memory JPEG and a closed generic clue schema. The client rejects refusals, incomplete responses, extra fields and non-generic descriptions. Spotter writes no captured frames to disk. OpenAI's service-side data handling still follows your API account's data controls; `store: false` is not a claim of zero provider retention.
+
+Chat Guard classifies messages only when Twitch and AI are configured. Pure code authorizes high-confidence guessing-message deletion. The private dashboard audit keeps message IDs, timestamps and outcomes; it does not keep message text. Sensitive terms entered in the private form go directly to Twitch blocked terms and are not stored by Spotter. Keep their returned IDs for removal.
+
+References: [Responses structured output](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses), [image input](https://developers.openai.com/api/docs/guides/images-vision), [OBS client](https://github.com/obs-websocket-community-projects/obs-websocket-js).

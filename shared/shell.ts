@@ -18,7 +18,7 @@ if (page === 'dashboard') {
     </section>
     <section id="scene-panel" class="card" hidden><span class="eyebrow">SYNTHETIC SCENE / MOCK VISION · SIMULATED</span><img id="scene" alt="Synthetic street illustration for the mock demo"/><p>Illustrative fixture. Mock clues follow the script; no model interprets these pixels.</p></section><section class="lower"><article class="card"><span class="eyebrow">THIS SESSION</span><h2>Energy meets community.</h2><svg id="curves" viewBox="0 0 600 180" role="img" aria-label="Energy and chat activity over time"><path d="M0 160H600 M0 90H600 M0 20H600" stroke="#334039" fill="none"/></svg><p class="legend"><span>● Energy</span><span>● Chat activity, scaled to session peak</span></p></article>
       <article class="card"><span class="eyebrow">EXPOSURE REPLAY</span><h2>The clues, without the place.</h2><ol id="timeline"></ol><p id="moderation" class="muted">No moderated messages.</p></article></section>
-    <footer><label><input type="checkbox" id="hud"> Opt in to the public stamina HUD</label><p>Frames aren’t saved. Audio stays local. No location is ever produced.</p></footer>`;
+    <section id="terms-panel" class="card" hidden><span class="eyebrow">PRIVATE CHAT GUARD</span><h2>Blocked terms, without the guesswork.</h2><form id="terms-form"><label>Private sensitive term <input id="term" required minlength="2" maxlength="500" autocomplete="off"></label><button>Add to Twitch blocked terms</button></form><ul id="terms"></ul><p>Terms go to Twitch and are not saved in Spotter. Keep the returned ID to remove a term later.</p></section><footer><label><input type="checkbox" id="hud"> Opt in to the public stamina HUD</label><p>Frames aren’t saved. Audio stays local. No location is ever produced.</p></footer>`;
 } else if (page === 'overlay') {
   app.innerHTML = `${badge}<section id="hud-content" hidden><span class="eyebrow">SPOTTER / SECOND WIND</span><meter id="energy-meter" min="0" max="100" value="0"></meter><p id="raid-phase"></p></section>`;
 } else {
@@ -29,20 +29,38 @@ const text = (id: string, value: string) => { const target = element(id); if (ta
 const hidden = (id: string, value: boolean) => { const target = element(id); if (target) target.hidden = value; };
 const meter = (id: string, value: number) => { const target = element(id) as HTMLMeterElement | null; if (target) target.value = value; };
 let busy = false;
-async function post(path: string, payload?: unknown): Promise<void> {
+let isSimulated = false;
+async function post(path: string, payload?: unknown, method = 'POST'): Promise<void> {
   if (busy) return;
   busy = true;
   try {
-    const response = await fetch(path, { method: 'POST', ...(payload ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}) });
+    const response = await fetch(path, { method, ...(payload ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}) });
     if (!response.ok) throw new Error('Action unavailable');
     await refresh();
   } catch { text('error', 'Action unavailable. Try again.'); hidden('error', false); }
   finally { busy = false; }
 }
 for (const [id, action] of [['approve', 'approve'], ['cancel', 'cancel'], ['back', 'requestBack'], ['dismiss', 'dismiss'], ['reset', 'reset']]) {
-  if (id && action) element(id)?.addEventListener('click', () => { void post(`/api/demo/${action}`); });
+  if (id && action) element(id)?.addEventListener('click', () => { void post(isSimulated ? `/api/demo/${action}` : action === 'dismiss' ? '/api/privacy/dismiss' : `/api/relay/${action}`); });
 }
 element('hud')?.addEventListener('change', (event) => { void post('/api/hud', { enabled: (event.target as HTMLInputElement).checked }); });
+element('terms-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const input = element('term') as HTMLInputElement;
+  try {
+    const response = await fetch('/api/terms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ term: input.value }) });
+    if (!response.ok) throw new Error('Unavailable');
+    const value = await response.json() as { id: string };
+    input.value = '';
+    const li = document.createElement('li'); li.textContent = `Blocked term ID: ${value.id} `;
+    const remove = document.createElement('button'); remove.textContent = 'Remove term';
+    remove.addEventListener('click', async () => {
+      const response = await fetch(`/api/terms/${encodeURIComponent(value.id)}`, { method: 'DELETE' });
+      if (response.ok) li.remove(); else { text('error', 'Term removal unavailable'); hidden('error', false); }
+    });
+    li.append(remove); element('terms')?.append(li);
+  } catch { text('error', 'Blocked term unavailable. Check Twitch authorization.'); hidden('error', false); }
+});
 function chart(state: Snapshot): void {
   const svg = element('curves');
   if (!svg) return;
@@ -56,27 +74,28 @@ function chart(state: Snapshot): void {
   }
 }
 function render(state: Snapshot): void {
-  hidden('reset', false);
-  hidden('scene-panel', false);
+  hidden('reset', !state.simulated);
+  hidden('scene-panel', !state.simulated);
+  hidden('terms-panel', state.simulated);
   const scene = element('scene');
   if (scene) scene.style.filter = state.exposure.active ? 'blur(12px)' : 'none';
   text('exposure', String(state.exposure.score)); meter('exposure-meter', state.exposure.score);
   text('energy', state.energy === null ? '—' : String(state.energy)); meter('energy-meter', state.energy ?? 0);
-  text('analysis', state.exposure.active ? 'Privacy action active · simulated' : state.exposure.score < 60 ? 'no obvious clues detected' : 'Identifying clues detected');
-  text('calibration', 'Simulated personal baseline · accelerated time');
+  text('analysis', state.analysis !== 'available' ? 'analysis unavailable' : state.exposure.active ? state.simulated ? 'Privacy action active · simulated' : (state as unknown as { actionStatus: string }).actionStatus : state.exposure.score < 60 ? 'no obvious clues detected' : 'Identifying clues detected');
+  text('calibration', state.simulated ? 'Simulated personal baseline · accelerated time' : 'Waiting for numeric audio features');
   text('chat', `${state.chat.messagesPerMinute} messages/min · ${state.chat.uniqueChattersPerMinute} unique chatters/min`);
   text('correlation', state.correlation === null ? 'Correlation needs paired stream samples.' : `Energy / chat correlation: ${state.correlation.toFixed(2)} · association, not causation`);
   text('partner', state.crew[0] ? `Crew partner · ${state.crew[0].energy}% energy` : 'No crew connected');
   text('raid-phase', state.tagout.phase === 'raiding' ? 'Simulated countdown · waiting for raid event' : state.tagout.phase);
-  hidden('combined', !state.combinedAlert); hidden('dismiss', !state.exposure.active);
+  hidden('combined', !state.combinedAlert); hidden('dismiss', !state.exposure.active && !(state as unknown as { privacyActive?: boolean }).privacyActive);
   hidden('approve', !['suggested', 'tag-back'].includes(state.tagout.phase));
   text('approve', state.tagout.phase === 'tag-back' ? 'Partner: approve simulated tag back' : 'Approve simulated raid');
   hidden('cancel', !['suggested', 'confirming', 'raiding', 'tag-back'].includes(state.tagout.phase)); hidden('back', state.tagout.phase !== 'covered');
   const clues = element('clues');
   clues?.replaceChildren(...state.clues.map((clue) => { const li = document.createElement('li'); li.textContent = `${clue.description} · ${Math.round(clue.confidence * 100)}%`; return li; }));
   const timeline = element('timeline');
-  timeline?.replaceChildren(...state.timeline.filter((entry) => entry.actions.length > 0).slice(-5).map((entry) => { const li = document.createElement('li'); li.textContent = `${Math.floor(entry.at / 60_000)}:00 · score ${entry.score} · ${entry.actions.join(' + ')} · SIMULATED`; return li; }));
-  text('moderation', `${state.moderation.length} simulated guessing message(s) removed · IDs: ${state.moderation.map((entry) => entry.id).join(', ') || 'none'}`);
+  timeline?.replaceChildren(...state.timeline.filter((entry) => entry.actions.length > 0).slice(-5).map((entry) => { const li = document.createElement('li'); li.textContent = `${state.simulated ? `${Math.floor(entry.at / 60_000)}:00` : new Date(entry.at).toLocaleTimeString()} · score ${entry.score} · ${entry.actions.join(' + ')}${state.simulated ? ' · SIMULATED' : ''}`; return li; }));
+  text('moderation', `${state.moderation.length} ${state.simulated ? 'simulated ' : ''}moderation record(s) · IDs: ${state.moderation.map((entry) => entry.id).join(', ') || 'none'}`);
   chart(state);
 }
 async function refresh(): Promise<void> {
@@ -84,6 +103,7 @@ async function refresh(): Promise<void> {
     const response = await fetch(page === 'overlay' ? '/api/overlay' : '/api/status');
     if (!response.ok) throw new Error('Unavailable');
     const state = await response.json() as Snapshot & { enabled?: boolean; phase?: string };
+    isSimulated = state.simulated;
     hidden('simulated', !state.simulated);
     if (page === 'overlay') {
       hidden('hud-content', !state.enabled); meter('energy-meter', state.energy ?? 0); text('raid-phase', state.phase ?? '');
@@ -91,6 +111,7 @@ async function refresh(): Promise<void> {
       text('connection', state.simulated ? '● Demo session · accelerated time' : '● Local session · integrations disconnected');
       hidden('twitch-connect', state.simulated);
       if (!state.simulated && page === 'dashboard') {
+        render(state);
         const live = state as unknown as { twitch: { connected: boolean; status: string }; chat: { messagesPerMinute: number; uniqueChattersPerMinute: number } };
         text('connection', `● Twitch: ${live.twitch.status}`);
         text('chat', live.twitch.connected ? `${live.chat.messagesPerMinute} messages/min · ${live.chat.uniqueChattersPerMinute} unique chatters/min` : 'Chat activity unavailable');

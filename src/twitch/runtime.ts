@@ -17,6 +17,8 @@ export class TwitchRuntime {
   private status = 'authorization required';
   private connected = false;
   private closed = false;
+  private chatHandler: ((id: string, message: string, at: number) => Promise<void>) | null = null;
+  setChatHandler(handler: (id: string, message: string, at: number) => Promise<void>): void { this.chatHandler = handler; }
   constructor(database: DatabaseSync, config: TwitchConfig) {
     this.auth = new TwitchAuth(database, config);
     this.helix = new Helix(config.clientId, () => this.auth.accessToken(), config.fetcher);
@@ -45,6 +47,8 @@ export class TwitchRuntime {
     const id = this.auth.identity?.userId;
     const event = notification.event;
     if (notification.type === 'channel.chat.message' && event.broadcaster_user_id === id && typeof event.message_id === 'string' && typeof event.chatter_user_id === 'string') {
+      const content = event.message as { text?: unknown } | undefined;
+      if (typeof content?.text === 'string' && this.chatHandler) void this.chatHandler(event.message_id, content.text, notification.at).catch(() => {});
       this.chats = [...this.chats.filter((chat) => notification.at - chat.at <= 60_000), { id: event.message_id, userId: event.chatter_user_id, at: notification.at }].slice(-10_000);
     }
     if (notification.type === 'stream.online' && event.broadcaster_user_id === id) this.online = true;

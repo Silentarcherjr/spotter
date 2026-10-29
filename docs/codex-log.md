@@ -46,3 +46,13 @@
 - Added live runtime that retains chat activity IDs only and shows aggregate velocity. Initialized private file permissions for server data. Live action UI is deferred to the module phases.
 - Tests: OAuth state/refresh; Helix methods/query/body/error hygiene; EventSub subscription/deduplication/migration/keepalive; activity reduction without raw text. Fixtures are documentation-shaped synthetic values; Twitch CLI is not installed, so CLI-generated fixtures and real-channel proof remain HUMAN steps.
 - User approved obs-websocket-js, pitchy and @fastify/websocket for upcoming module work; installed these dependencies now.
+
+## 2026-10-29 — Phase 4 Off the Map implementation, live proof pending
+
+- Used OpenAI Docs skill and opened official Responses Structured Outputs/image-input documentation; consulted the OBS WebSocket client reference.
+- Implemented configured-model Responses calls with strict closed schemas, store:false, bounded in-memory image input, eight-second timeout, refusal/incomplete/error handling and runtime validation. Chat classifications contain only a boolean/confidence; vision descriptions remain generic allowlisted phrases.
+- Added reconnecting OBS adapter with four-second capture orchestration (768px JPEG), privacy scene/filter application and exact previous-state restoration on dismissal. No captured image is persisted or sent to the overlay.
+- Added OffTheMap module that invokes only core-decided actions, keeps the last score on analysis failure, bounds replay history and exposes action failures separately.
+- Connected Chat Guard through the core moderation policy, with bounded classifier concurrency and a SQLite intent/outcome audit by message ID before deletion. The private audit is the mod notice; raw message text is not stored. Added private blocked-term add/remove controls; submitted sensitive terms are not retained by Spotter.
+- Tests added before modules: Responses request contract/refusal, OffTheMap fail-soft/no repeat action/dismissal, OBS capture/restore/closed connection, Chat Guard missing-analysis/no deletion and ID-only audit.
+- Verification: 28 tests pass; typecheck, lint and build pass. No real Twitch/OBS/OpenAI request was exercised; the HUMAN recorded take and credentials remain pending.
