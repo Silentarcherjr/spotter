@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { TwitchRuntime } from './twitch/runtime.ts';
 import type { TwitchConfig } from './twitch/auth.ts';
 import { ObsClient } from './obs/client.ts';
-import type { ObsConfig } from './obs/client.ts';
+import type { ObsConfig, ObsWire } from './obs/client.ts';
 import { ResponsesAI } from './ai/responses.ts';
 import type { AIConfig } from './ai/responses.ts';
 import { OffTheMap } from './modules/offthemap/runtime.ts';
@@ -20,7 +20,7 @@ import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; exposureThresholds?: { warn: number; act: number } }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
@@ -49,9 +49,9 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   });
   let demo = options.simulated ? new DemoSession(true) : null;
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
-  const obs = !options.simulated && options.obs ? new ObsClient(options.obs) : null;
+  const obs = !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
   const ai = !options.simulated && options.ai ? new ResponsesAI(options.ai) : null;
-  const offthemap = obs && ai ? new OffTheMap({ capture: () => obs.capture(), analyze: (frame) => ai.vision(frame), privacy: () => obs.applyPrivacy(), restore: () => obs.restore(), marker: async () => {
+  const offthemap = obs && ai ? new OffTheMap({ available: () => obs.connected, capture: () => obs.capture(), analyze: (frame) => ai.vision(frame), privacy: () => obs.applyPrivacy(), restore: () => obs.restore(), marker: async () => {
     const id = twitch?.auth.identity?.userId;
     if (twitch && id) return twitch.helix.marker(id);
     throw new Error('Twitch unavailable');
@@ -129,6 +129,14 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
       app.post(`/api/demo/${action}`, async () => { demo![action](); return demo!.snapshot(); });
     }
   }
+  app.post('/api/obs/disconnect', async (_request, reply) => {
+    if (!obs) return reply.code(503).send({ error: 'OBS integration unavailable' });
+    offthemap?.invalidateAnalysis(); await obs.stop(); return { connected: false };
+  });
+  app.post('/api/obs/reconnect', async (_request, reply) => {
+    if (!obs) return reply.code(503).send({ error: 'OBS integration unavailable' });
+    await obs.start(); return { connected: obs.connected };
+  });
   app.post('/api/privacy/dismiss', async (_request, reply) => {
     if (!offthemap) return reply.code(503).send({ error: 'Privacy integration unavailable' });
     try { await offthemap.dismiss(); return { dismissed: true }; }

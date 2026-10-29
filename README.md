@@ -6,13 +6,13 @@ A local companion with three modules: Off the Map (identifying-clue exposure), S
 
 ## Current status
 
-The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real OAuth and EventSub chat rate have been checked on the authorized channel. Live blocked-term enforcement/removal and a controlled Chat Guard deletion have also been verified. Real raids, automatic OBS privacy transitions and microphone capture remain unverified.
+The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real OAuth and EventSub chat rate have been checked on the authorized channel. Live blocked-term enforcement/removal and a controlled Chat Guard deletion have also been verified. Real OBS capture/vision, threshold privacy, stream markers and scene restoration have now been exercised while streaming a prerecorded clip. Real raids and microphone capture remain unverified.
 
 | Area | Verified | Still needed |
 | --- | --- | --- |
 | Scaffold/core/demo | Automated tests and browser walkthrough | Real demo media |
 | Twitch | Real OAuth/chat rate, blocked-term hold/removal, audited test deletion and CLI/live fixtures | Real raid and submission recording |
-| Off the Map | Vision/fail-soft tests, real OBS scene setup and OpenRouter local-video calibration | Real OBS/privacy/moderation take |
+| Off the Map | Real OBS/vision → privacy/marker → restore; WebSocket disconnect survival; private dashboard take | Full-motion submission edit; full OBS-process shutdown proof |
 | Second Wind | Synthetic tone, numeric WebSocket, profiles/reports | Real mic calibration and live-stream proof |
 | Tag Out | Approval, live guards, cancellation, restart/rate-limit tests | Two-channel raid/tag-back recording |
 
@@ -143,13 +143,19 @@ Both browser inputs render at **1920×1080** and fit the current OBS canvas. The
 
 The command updates only `OBS_MAIN_SCENE`, `OBS_PRIVACY_SCENE`, `OBS_SOURCE`, `OBS_OVERLAY_SOURCE`, `OBS_PRIVACY_SOURCE` and `OBS_BLUR_FILTER` in `.env`, preserving credentials. `OBS_SOURCE=Spotter IRL` captures the video directly; `OBS_PRIVACY_SCENE=Privacy` and an empty `OBS_BLUR_FILTER` select scene-switch privacy. Dismissal restores the previously active scene. Main/overlay/privacy source names are fixed by this setup; the extra source-name variables document its targets. Restart an existing `npm run dev` after environment changes. The setup needs OBS open; the browser sources need Vite running on `127.0.0.1` (`VITE_PORT`, default 5173).
 
-Reruns reuse sources/items, repair settings/visibility/transforms/order, and update changed URLs or clip paths without duplicating inputs. Unrelated sources remain; the privacy backdrop covers any existing sources beneath it. Conflicting input types stop with an error. No blur plugin is required. The command does not start streaming/recording, switch the current program scene or send video to AI. Connection/request failures print sanitized diagnostics, never raw credentials; code 4009 means authentication was rejected. Automatic OBS privacy/restore and marker integration still require their separate live verification.
+Reruns reuse sources/items, repair settings/visibility/transforms/order, and update changed URLs or clip paths without duplicating inputs. Unrelated sources remain; the privacy backdrop covers any existing sources beneath it. Conflicting input types stop with an error. No blur plugin is required. The command does not start streaming/recording, switch the current program scene or send video to AI. Connection/request failures print sanitized diagnostics, never raw credentials; code 4009 means authentication was rejected. Automatic OBS privacy/restore and marker integration were subsequently verified while streaming the clip; private evidence stays under ignored data/takes/.
 
 ## Off the Map
 
 Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. `VISION_FRAME_WIDTH=1280` controls both video extraction and OBS screenshots (integer 128–4096); `AI_TIMEOUT_MS=15000` controls the AI request timeout (integer 1–120000 milliseconds). Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples JPEGs at `VISION_FRAME_WIDTH` (1280px by default) every four seconds.
 
 The schema contains clue categories, generic allowlisted descriptions, severity and confidence. Runtime parsing rejects extra fields, literal text, invalid values, refusals and incomplete responses. Core scoring combines distinct categories over time with decay. Configure `EXPOSURE_WARN`/`EXPOSURE_ACT` (defaults 60/80). A warning stays private; an action applies privacy and requests a marker. Missing analysis retains the score and cannot trigger an action. Dismiss restores the previous scene/filter state; restoration failure remains retryable.
+
+The live OBS check exposed a JPEG MIME alias (`image/jpg`); the adapter now normalizes it to `image/jpeg` before vision validation without changing image bytes or saving frames. Dismissal invalidates pending vision, waits for an already-sent privacy scene RPC before reversing it, and prevents the canceled sample from sending its next marker. Marker receipt/status and sanitized HTTP status appear only in private `/api/status`.
+
+Stream markers require [VOD storage to be enabled](https://dev.twitch.tv/docs/api/reference/#create-stream-marker). In the real test, HTTP 404 cleared after the user enabled past-broadcast storage and restarted their stream. `npm run twitch:markers` reads back only Spotter marker IDs/times/positions, omitting other marker descriptions and playback URLs. `npm run obs:proof` reads only scene/media/output-active metadata; it never requests stream service settings or a stream key. Its explicit `--main`, `--cue-demo`, `--cue-building` and `--resume` flags change the demo scene/media; `--watch-scenes` records scene-name changes for 90 seconds. `--capture-metadata` inspects a JPEG in memory and returns only MIME/length.
+
+For a controlled connection test, local POST `/api/obs/disconnect` invalidates in-flight analysis and stops only Spotter's WebSocket/retry loop; POST `/api/obs/reconnect` restores it. These routes do not stop streaming or recording. During the real 14-second disconnected window, eight health checks returned 200, the last score stayed unchanged, analysis was unavailable, the decision timeline did not grow and no new stream marker appeared. This checks a client-link interruption, not shutting down the OBS application.
 
 The Responses request sets `store: false`. Images exist only in memory; the overlay receives no exposure/clue data. Provider-side handling follows the selected service/account's data controls: this setting is not a claim of zero provider retention.
 
@@ -206,7 +212,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**76 automated tests (76 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**82 automated tests (82 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

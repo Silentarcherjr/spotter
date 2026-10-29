@@ -40,7 +40,7 @@ export class ObsClient {
     this.ready();
     const scene = this.config.source ?? (await this.limit(this.wire.call('GetCurrentProgramScene'))).currentProgramSceneName;
     const result = await this.limit(this.wire.call('GetSourceScreenshot', { sourceName: scene, imageFormat: 'jpg', imageWidth: this.config.frameWidth! }));
-    return result.imageData;
+    return result.imageData.replace(/^data:image\/jpg;base64,/, 'data:image/jpeg;base64,');
   }
   async applyPrivacy(): Promise<void> {
     this.ready();

@@ -7,25 +7,28 @@ Offline implementation does not establish the real-service definition of done. D
 - [x] Twitch dev app configured and primary account authorized with the six required scopes. Crew authorization remains separate.
 - [x] Twitch CLI 1.1.24 installed; raid and online/offline fixtures generated with `event trigger --no-config` and fake IDs. CLI does not support chat; that fixture is a redacted controlled live EventSub event. See test/fixtures/twitch/README.md.
 - [x] CLI mock-api server smoke: started locally on port 8087; GET /units/users returned 200 with 25 generated mock users; stopped afterward. This does not claim authenticated mock Helix endpoint coverage.
-- [x] OBS WebSocket authenticated; `npm run obs:setup` created and read back `Main`/`Privacy`, looped media and 1080p browser sources. A real rerun created no duplicates. `.env` uses scene-switch privacy with no blur filter. Automatic privacy/restore recording below remains pending.
-- [ ] OpenAI key and compatible image/Structured Outputs model set in `.env`.
+- [x] OBS WebSocket authenticated; `npm run obs:setup` created and read back `Main`/`Privacy`, looped media and 1080p browser sources. A real rerun created no duplicates. `.env` uses scene-switch privacy with no blur filter. Real privacy/restore and the client-link interruption are checked below.
+- [x] AI endpoint, key and compatible vision/Structured Outputs model configured locally; actual local-video and live-OBS vision calls succeeded. Credential values were not inspected/displayed.
 - [ ] Owned IRL footage and voice media available; avoid identifiable bystanders.
 - [x] Codex session ID recorded from the current thread environment in CODEX_SESSION.md.
 
 ## Local video calibration before OBS
 
-- [ ] Ensure `ffmpeg` and `ffprobe` are available on PATH (already present on the development host).
-- [ ] Set `OPENAI_VISION_DETAIL=high` and the real API key/model in `.env`.
-- [ ] Run `npm run calibrate -- --video "/absolute/path/to/owned-clip.mp4" --output data/irl-calibration`; review the private HTML/CSV/JSON score report. All sampled frames use media timestamps; JPEGs stay in memory. Check whether the sample cap was reached.
-- [ ] Inspect unavailable rows separately from valid low scores, compare threshold crossings, adjust `.env` warning/action thresholds and repeat as needed. This prerecorded input is labelled SIMULATED · REAL VISION and executes no OBS/Twitch action.
+- [x] ffmpeg/ffprobe verified through actual decode and dashboard video encoding.
+- [x] Real local-video calibration used high detail, configured model/key and 1280px width.
+- [x] Prior real local-video calibration: 24/24 sampled frames available at a two-second interval, uncapped; private HTML/CSV/JSON and analysis remain in data/real-vision/. JPEGs stayed in memory.
+- [x] Reviewed missing rows and crossings, compared 1280px/768px and retained provisional 60/80. This prerecorded calibration is labelled SIMULATED · REAL VISION and executes no OBS/Twitch action. Live OBS source overlay also labels recorded input SIMULATED.
 
 ## Record real flows
 
 - [x] Primary OAuth authorization and real EventSub chat verified: a controlled API-sent message appeared as 1 message/min and 1 unique chatter/min on the dashboard. Channel offline; no simulation source used.
 - [x] Restarted Spotter: stored authorization validated and real EventSub reconnected without repeating OAuth.
 - [ ] Observe real expiry-driven token refresh and keepalive/network-failure recovery; these are covered by offline tests but were not forced in this live check.
-- [ ] Play owned footage in OBS. Generic clues increase the private score, privacy scene/filter applies, marker appears. Confirm no frame files are produced and overlay exposes no clue/score.
-- [ ] Dismiss privacy and verify the exact previous scene/filter state. Close OBS and confirm the server survives and shows analysis unavailable without a new action.
+- [x] While Twitch/OBS were live with the recorded clip in Main, real vision crossed 80 and OBS switched to Privacy. Marker creation initially returned 404; after the user enabled VOD and restarted their stream, automatic marker receipts matched Twitch readback. Captured model images stayed in memory; overlay payload excludes exposure/clues/private action metadata.
+- [x] Dismiss restored the recorded previous scene Main (OBS readback). Fixed the observed busy-analysis dismissal refusal and added pending-analysis/pending-scene-RPC regression tests. This setup uses scene switching, no filter.
+- [x] At the user signal, disconnected only Spotter's OBS WebSocket: eight checks over 14 seconds returned health 200, held score 54, showed analysis unavailable and added no timeline decisions or Twitch markers. Independent OBS readback showed Main still streaming; then reconnected Spotter.
+- [ ] Test closing/reopening the whole OBS application separately when not broadcasting; this live test interrupted only the client WebSocket.
+- [x] Saved a private segmented dashboard take (~1fps captures, no audio, 131.27s encoded H.264 1280×720) plus JSON evidence under ignored data/takes/offthemap-2026-10-29/. This is evidence footage, not the finished submission edit.
 - [x] Added an artificial temporary blocked term through Spotter; from a non-moderator secondary account Twitch AutoMod displayed that the comment was held and not published. Removed the term through Spotter, then resent the same text: it reached EventSub as normal chat. Screenshots remain private in data/.
 - [x] Sent a controlled location-guessing test without any actual place/name/address from the secondary account. Chat Guard deleted it; Twitch displayed the deletion and the private audit recorded action=delete, simulated=false, with ID/time only. No real chat text was persisted by the app.
 - [ ] Force a real model failure and verify no live deletion; this fail-soft condition is covered by offline regression tests, not exercised against the live provider here.

@@ -206,3 +206,66 @@ test('a configured timeout actually aborts the request and returns a sanitized r
     assert.equal((error as Error & { reason?: string }).reason, 'timeout'); return true;
   });
 });
+
+test('disconnect invalidates in-flight vision and prevents stale privacy/marker actions', async () => {
+  let resolveVision!: (value: import('../src/core/types.ts').Clue[]) => void;
+  let actions = 0;
+  const module = new OffTheMap({ capture: async () => 'data:image/jpeg;base64,AA==', analyze: () => new Promise((resolve) => { resolveVision = resolve; }), privacy: async () => { actions++; }, restore: async () => {}, marker: async () => { actions++; } });
+  const pending = module.sample(0);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  module.invalidateAnalysis();
+  resolveVision([{ category: 'storefront', severity: 5, confidence: 1 }, { category: 'transit', severity: 5, confidence: 1 }]);
+  await pending;
+  assert.equal(module.snapshot().analysis, 'analysis unavailable');
+  assert.equal(module.snapshot().exposure.score, 0);
+  assert.equal(module.snapshot().timeline.length, 0);
+  assert.equal(actions, 0);
+});
+
+test('OBS image/jpg captures are normalized to image/jpeg before real vision validation', async () => {
+  const obs = new ObsClient({ url: 'ws://127.0.0.1:4455', password: '', privacyScene: 'Privacy', source: 'Clip' }, { on() {}, async connect() {}, async disconnect() {}, async call() { return { imageData: 'data:image/jpg;base64,AA==' }; } } as unknown as ObsWire);
+  await obs.start();
+  try {
+    const image = await obs.capture();
+    assert.equal(image, 'data:image/jpeg;base64,AA==');
+    const ai = new ResponsesAI({ key: 'fake', model: 'configured-model', fetcher: async () => completed({ clues: [] }) });
+    assert.deepEqual(await ai.vision(image), []);
+  } finally { await obs.stop(); }
+});
+
+test('marker confirmation retains only receipt fields and distinguishes a rejected marker from applied privacy', async () => {
+  for (const rejected of [false, true]) {
+    const module = new OffTheMap({ capture: async () => 'data:image/jpeg;base64,AA==', analyze: async () => [{ category: 'storefront', severity: 5, confidence: 1 }, { category: 'transit', severity: 5, confidence: 1 }], privacy: async () => {}, restore: async () => {}, marker: async () => {
+      if (rejected) throw new Error('Twitch request unavailable (404)');
+      return { data: [{ id: 'marker-1', position_seconds: 42, created_at: '2026-10-29T12:00:00Z', extra: 'never stored' }] };
+    } });
+    await module.sample(0);
+    const state = module.snapshot();
+    assert.equal(state.privacyActive, true);
+    assert.equal(state.markerStatus, rejected ? 'unavailable' : 'created');
+    assert.equal(state.markerHttpStatus, rejected ? 404 : null);
+    assert.deepEqual(state.lastMarker, rejected ? null : { id: 'marker-1', positionSeconds: 42, createdAt: '2026-10-29T12:00:00Z' });
+    assert.doesNotMatch(JSON.stringify(state), /never stored/);
+  }
+});
+
+test('dismissal restores during pending vision and a late result cannot reactivate privacy', async () => {
+  let finish!: (value: import('../src/core/types.ts').Clue[]) => void; let restores = 0; let actions = 0;
+  const module = new OffTheMap({ capture: async () => 'data:image/jpeg;base64,AA==', analyze: () => new Promise((resolve) => { finish = resolve; }), privacy: async () => { actions++; }, restore: async () => { restores++; }, marker: async () => { actions++; } });
+  const pending = module.sample(0); await new Promise<void>((resolve) => setImmediate(resolve));
+  await module.dismiss();
+  assert.equal(restores, 1);
+  finish([{ category: 'storefront', severity: 5, confidence: 1 }, { category: 'transit', severity: 5, confidence: 1 }]);
+  await pending;
+  assert.equal(actions, 0); assert.equal(module.snapshot().privacyActive, false); assert.equal(module.snapshot().exposure.dismissed, true);
+});
+
+test('dismiss waits for a pending privacy RPC before restoration and cancels its following marker', async () => {
+  let finishPrivacy!: () => void; let restores = 0; let markers = 0;
+  const module = new OffTheMap({ capture: async () => 'data:image/jpeg;base64,AA==', analyze: async () => [{ category: 'storefront', severity: 5, confidence: 1 }, { category: 'transit', severity: 5, confidence: 1 }], privacy: () => new Promise<void>((resolve) => { finishPrivacy = resolve; }), restore: async () => { restores++; }, marker: async () => { markers++; } });
+  const sample = module.sample(0); await new Promise<void>((resolve) => setImmediate(resolve));
+  const dismiss = module.dismiss();
+  assert.equal(restores, 0);
+  finishPrivacy(); await Promise.all([sample, dismiss]);
+  assert.equal(restores, 1); assert.equal(markers, 0); assert.equal(module.snapshot().privacyActive, false);
+});
