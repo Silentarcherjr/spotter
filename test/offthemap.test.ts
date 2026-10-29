@@ -41,7 +41,7 @@ test('Off the Map fails soft, retains score, never acts on missing data and rest
   assert.equal(module.snapshot().privacyActive, false);
 });
 
-test('OBS captures 768px JPEG, restores exact prior scene and survives closed OBS', async () => {
+test('OBS captures default 1280px JPEG, restores exact prior scene and survives closed OBS', async () => {
   const calls: { request: string; data: unknown }[] = [];
   const wire = {
     on() {}, async connect() {}, async disconnect() {},
@@ -55,7 +55,7 @@ test('OBS captures 768px JPEG, restores exact prior scene and survives closed OB
   const obs = new ObsClient({ url: 'ws://127.0.0.1:4455', password: '', privacyScene: 'Privacy' }, wire);
   await obs.start();
   assert.equal(await obs.capture(), 'data:image/jpeg;base64,AA==');
-  assert.deepEqual(calls.find((call) => call.request === 'GetSourceScreenshot')?.data, { sourceName: 'Main', imageFormat: 'jpg', imageWidth: 768 });
+  assert.deepEqual(calls.find((call) => call.request === 'GetSourceScreenshot')?.data, { sourceName: 'Main', imageFormat: 'jpg', imageWidth: 1280 });
   await obs.applyPrivacy(); await obs.restore();
   assert.deepEqual(calls.filter((call) => call.request === 'SetCurrentProgramScene').map((call) => call.data), [{ sceneName: 'Privacy' }, { sceneName: 'Main' }]);
   await obs.stop();
@@ -160,4 +160,49 @@ test('invalid AI base URLs fail before any request', () => {
   for (const baseURL of ['not-a-url', 'file:///tmp/api', 'https://user:password@openrouter.ai/api/v1', 'https://openrouter.ai/api/v1?key=secret']) {
     assert.throws(() => new ResponsesAI({ key: 'fake-key', model: 'provider/model', baseURL }));
   }
+});
+
+for (const timeoutMs of [undefined, 45] as const) {
+  test(`AI timeout is configurable (${timeoutMs ?? '15000 default'}ms)`, async () => {
+    const original = AbortSignal.timeout;
+    const seen: number[] = [];
+    AbortSignal.timeout = (milliseconds: number) => { seen.push(milliseconds); return original(milliseconds); };
+    try {
+      const ai = new ResponsesAI({ key: 'fake-key', model: 'configured-model', ...(timeoutMs ? { timeoutMs } : {}), fetcher: async () => completed({ clues: [] }) });
+      await ai.vision('data:image/jpeg;base64,AA==');
+      assert.deepEqual(seen, [timeoutMs ?? 15_000]);
+    } finally { AbortSignal.timeout = original; }
+  });
+}
+
+test('OBS accepts a configured frame width and rejects invalid widths', async () => {
+  let width = 0;
+  const wire = { on() {}, async connect() {}, async disconnect() {}, async call(request: string, data: { imageWidth?: number }) { if (request === 'GetSourceScreenshot') { width = data.imageWidth ?? 0; return { imageData: 'data:image/jpeg;base64,AA==' }; } return { currentProgramSceneName: 'Main' }; } } as unknown as ObsWire;
+  const config = { url: 'ws://127.0.0.1:4455', password: '', privacyScene: 'Privacy', frameWidth: 1920 };
+  const obs = new ObsClient(config, wire);
+  await obs.start(); await obs.capture(); await obs.stop();
+  assert.equal(width, 1920);
+  assert.throws(() => new ObsClient({ ...config, frameWidth: -1 }, wire));
+});
+
+test('provider rejection exposes only a sanitized diagnostic, never its raw body', async () => {
+  const ai = new ResponsesAI({ key: 'fake-key', model: 'configured-model', fetcher: async () => new Response(JSON.stringify({ error: { message: 'private provider content' } }), { status: 400 }) });
+  await assert.rejects(ai.vision('data:image/jpeg;base64,AA=='), (error: unknown) => {
+    const diagnostic = error as Error & { reason?: string; httpStatus?: number };
+    assert.equal(diagnostic.message, 'analysis unavailable');
+    assert.equal(diagnostic.reason, 'http_error');
+    assert.equal(diagnostic.httpStatus, 400);
+    assert.doesNotMatch(JSON.stringify(diagnostic), /private provider content/);
+    return true;
+  });
+});
+
+test('a configured timeout actually aborts the request and returns a sanitized reason', async () => {
+  const ai = new ResponsesAI({ key: 'fake-key', model: 'configured-model', timeoutMs: 10, fetcher: async (_url, init) => new Promise((_resolve, reject) => {
+    const guard = setTimeout(() => reject(new Error('did not abort')), 1000);
+    init?.signal?.addEventListener('abort', () => { clearTimeout(guard); reject(init.signal?.reason); }, { once: true });
+  }) });
+  await assert.rejects(ai.vision('data:image/jpeg;base64,AA=='), (error: unknown) => {
+    assert.equal((error as Error & { reason?: string }).reason, 'timeout'); return true;
+  });
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { execFile as execFileCallback } from 'node:child_process';
+import { spawnSync, execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
 import { VisionCalibration, calibrationCsv, calibrationHtml } from '../src/modules/offthemap/calibration.ts';
 import { videoFrames } from '../src/media/local-video.ts';
@@ -18,6 +18,8 @@ test('video calibration uses media timestamps, real scoring and fail-soft rows w
   const report = run.report();
   assert.equal(report.simulated, true);
   assert.equal(report.vision, 'real');
+  assert.equal(report.frameWidth, 1280);
+  assert.equal(report.timeoutMs, 15000);
   assert.equal(report.frames[0]?.score, 93);
   assert.deepEqual(report.frames[0]?.wouldRequest, ['privacy', 'marker']);
   assert.equal(report.frames[1]?.score, 93);
@@ -38,9 +40,15 @@ test('local video CLI extracts sampled JPEGs in memory and writes score reports 
     for await (const frame of videoFrames(clip, { intervalSeconds: 4, maxFrames: 2 })) {
       assert.equal(frame.simulated, true);
       assert.match(frame.image, /^data:image\/jpeg;base64,/);
+      const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width', '-of', 'json', '-i', 'pipe:0'], { input: Buffer.from(frame.image.split(',')[1]!, 'base64'), encoding: 'utf8' });
+      assert.equal(JSON.parse(probe.stdout).streams[0].width, 1280);
       frames.push(frame.at);
     }
     assert.deepEqual(frames, [0, 4000]);
+    for await (const frame of videoFrames(clip, { intervalSeconds: 4, maxFrames: 1, frameWidth: 640 })) {
+      const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width', '-of', 'json', '-i', 'pipe:0'], { input: Buffer.from(frame.image.split(',')[1]!, 'base64'), encoding: 'utf8' });
+      assert.equal(JSON.parse(probe.stdout).streams[0].width, 640);
+    }
     const output = join(directory, 'report');
     await execFile(process.execPath, ['--experimental-strip-types', 'scripts/calibrate.ts', '--video', clip, '--output', output, '--interval', '4', '--max-frames', '2', '--mock'], { env: { ...process.env, SIM: '1' } });
     const report = JSON.parse(await readFile(`${output}.json`, 'utf8')) as { frames: { score: number }[]; vision: string };

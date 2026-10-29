@@ -55,7 +55,7 @@ docs/codex-log.md
 
 ## OBS notes
 
-- `GetSourceScreenshot` (sourceName = program scene or camera source, imageFormat `jpg`, imageWidth 768) every 3–5 s.
+- `GetSourceScreenshot` (sourceName = program scene or camera source, imageFormat `jpg`, imageWidth from `VISION_FRAME_WIDTH` (default 1280)) every 3–5 s.
 - Actions: `SetCurrentProgramScene` to the configured "Privacy" scene, or `SetSourceFilterEnabled` on a configured blur filter.
 - Reconnect automatically; never crash the server if OBS is closed.
 

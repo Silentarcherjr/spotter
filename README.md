@@ -6,13 +6,13 @@ A local companion with three modules: Off the Map (identifying-clue exposure), S
 
 ## Current status
 
-The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Real-service verification and the submission are still pending.** No real raid, deletion, OBS action, model request or microphone capture was performed during development.
+The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real raids, deletions, OBS actions and microphone capture remain unverified.
 
 | Area | Verified | Still needed |
 | --- | --- | --- |
 | Scaffold/core/demo | Automated tests and browser walkthrough | Real demo media |
 | Twitch | Mocked OAuth/Helix/EventSub tests | Credentials, CLI fixtures, live-channel recording |
-| Off the Map | Vision contract, fail-soft and OBS adapter tests | Real OBS/model/privacy/moderation take |
+| Off the Map | Vision/fail-soft/OBS tests and real OpenRouter local-video calibration | Real OBS/privacy/moderation take |
 | Second Wind | Synthetic tone, numeric WebSocket, profiles/reports | Real mic calibration and live-stream proof |
 | Tag Out | Approval, live guards, cancellation, restart/rate-limit tests | Two-channel raid/tag-back recording |
 
@@ -60,17 +60,17 @@ Use the existing `ffmpeg` and `ffprobe` commands (both are required on PATH). Co
 npm run calibrate -- --video "/absolute/path/to/owned-irl-clip.mp4" --interval 4 --max-frames 120 --output data/irl-calibration
 ```
 
-Alternatively set `VISION_VIDEO_PATH` in `.env` and omit `--video`. The command samples every four seconds by default at 768px width, matching the OBS capture width. `--interval` accepts at least one second; `--max-frames` defaults to 120 and caps API calls. It analyzes **sampled frames**, not every original video frame. Each sample makes a billable real vision request unless explicitly using the mock mode below. No new npm dependency was added.
+Alternatively set `VISION_VIDEO_PATH` in `.env` and omit `--video`. The command samples every four seconds by default at `VISION_FRAME_WIDTH=1280`, matching the configurable OBS capture width. `--interval` accepts at least one second; `--max-frames` defaults to 120 and caps API calls. It analyzes **sampled frames**, not every original video frame. Each sample makes a billable real vision request unless explicitly using the mock mode below. No new npm dependency was added.
 
 The original clip stays local. JPEGs go from ffmpeg stdout to memory and then to the same `ResponsesAI.vision` contract used by OBS, with `store: false`. No extracted image is written to disk; audio is neither sent nor recorded. The mode instantiates no OBS/Twitch client and executes no automatic action. Captured output is labelled **SIMULATED · REAL VISION** because the input is prerecorded, even though the model analysis is real.
 
 Reports are private files under ignored `data/` by default:
 
-- `irl-calibration.json`: configured model/detail/thresholds, media duration, sampling interval/cap, and every sampled frame's score, availability, generic categories, severity/confidence and hypothetical core requests.
+- `irl-calibration.json`: configured model/detail/frame width/AI timeout/thresholds, media duration, sampling interval/cap, and every sampled frame's score, availability, generic categories, severity/confidence and hypothetical core requests.
 - `irl-calibration.csv`: compact per-sample score log, with media timestamps in milliseconds.
 - `irl-calibration.html`: standalone chart/table with warning/action lines for threshold inspection.
 
-The reports contain no images, raw model text or source filename/path. Missing/refused/timed-out vision retains the last score and records `analysis unavailable` with no hypothetical action. Hypothetical requests represent core state transitions, not actions repeatedly executed at every high-score frame. Inspect the sample rows and adjust `EXPOSURE_WARN`/`EXPOSURE_ACT` in `.env`, then repeat; the tool does not declare or infer a location. Check the CLI's limit notice / JSON `capped` flag when a long clip exceeds the sample cap. Keep reports private.
+The reports contain no images, raw model text or source filename/path. HTTP failures, timeouts, refusals, incomplete responses and invalid observations have sanitized diagnostic categories (plus HTTP status for HTTP failures), never raw provider messages. Missing/refused/timed-out vision retains the last score and records `analysis unavailable` with no hypothetical action. Hypothetical requests represent core state transitions, not actions repeatedly executed at every high-score frame. Inspect the sample rows and adjust `EXPOSURE_WARN`/`EXPOSURE_ACT` in `.env`, then repeat; the tool does not declare or infer a location. Check the CLI's limit notice / JSON `capped` flag when a long clip exceeds the sample cap. Keep reports private.
 
 For a key-free smoke check only, use explicit mock vision:
 
@@ -78,7 +78,7 @@ For a key-free smoke check only, use explicit mock vision:
 SIM=1 npm run calibrate -- --mock --video "/absolute/path/to/clip.mp4" --max-frames 3 --output data/mock-calibration
 ```
 
-That output is labelled SIMULATED · MOCK VISION. The integration test generates an owned silent synthetic video, extracts JPEGs in memory and verifies that only video input plus JSON/CSV/HTML reports exist afterward. Your real IRL clip and real API call have not been exercised yet.
+That output is labelled SIMULATED · MOCK VISION. The integration test generates an owned silent synthetic video, extracts JPEGs in memory and verifies that only video input plus JSON/CSV/HTML reports exist afterward. A real local-video calibration has also completed through OpenRouter; its reports and analysis remain private under ignored `data/`. This verifies recorded-image analysis, while live OBS actions still need a separate recording.
 
 ## Twitch
 
@@ -109,7 +109,7 @@ See [OpenRouter Responses](https://openrouter.ai/docs/api/reference/responses/ov
 
 ## Off the Map
 
-Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples 768px JPEGs every four seconds.
+Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. `VISION_FRAME_WIDTH=1280` controls both video extraction and OBS screenshots (integer 128–4096); `AI_TIMEOUT_MS=15000` controls the AI request timeout (integer 1–120000 milliseconds). Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples JPEGs at `VISION_FRAME_WIDTH` (1280px by default) every four seconds.
 
 The schema contains clue categories, generic allowlisted descriptions, severity and confidence. Runtime parsing rejects extra fields, literal text, invalid values, refusals and incomplete responses. Core scoring combines distinct categories over time with decay. Configure `EXPOSURE_WARN`/`EXPOSURE_ACT` (defaults 60/80). A warning stays private; an action applies privacy and requests a marker. Missing analysis retains the score and cannot trigger an action. Dismiss restores the previous scene/filter state; restoration failure remains retryable.
 
@@ -168,7 +168,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**61 automated tests (61 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**68 automated tests (68 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

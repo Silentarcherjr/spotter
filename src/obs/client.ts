@@ -1,7 +1,8 @@
 import OBSWebSocket from 'obs-websocket-js';
+import { parseVisionFrameWidth } from '../config.ts';
 
 export type ObsWire = Pick<OBSWebSocket, 'connect' | 'disconnect' | 'call' | 'on'>;
-export interface ObsConfig { url: string; password: string; privacyScene: string; source?: string; blurFilter?: string }
+export interface ObsConfig { frameWidth?: number; url: string; password: string; privacyScene: string; source?: string; blurFilter?: string }
 export class ObsClient {
   connected = false;
   private config: ObsConfig;
@@ -12,7 +13,7 @@ export class ObsClient {
   private previousScene: string | null = null;
   private previousFilter: boolean | null = null;
   constructor(config: ObsConfig, wire: ObsWire = new OBSWebSocket()) {
-    this.config = config; this.wire = wire;
+    this.config = { ...config, frameWidth: parseVisionFrameWidth(config.frameWidth) }; this.wire = wire;
     wire.on('ConnectionClosed', () => { this.connected = false; this.schedule(); });
     wire.on('ConnectionError', () => { this.connected = false; this.schedule(); });
   }
@@ -38,7 +39,7 @@ export class ObsClient {
   async capture(): Promise<string> {
     this.ready();
     const scene = this.config.source ?? (await this.limit(this.wire.call('GetCurrentProgramScene'))).currentProgramSceneName;
-    const result = await this.limit(this.wire.call('GetSourceScreenshot', { sourceName: scene, imageFormat: 'jpg', imageWidth: 768 }));
+    const result = await this.limit(this.wire.call('GetSourceScreenshot', { sourceName: scene, imageFormat: 'jpg', imageWidth: this.config.frameWidth! }));
     return result.imageData;
   }
   async applyPrivacy(): Promise<void> {

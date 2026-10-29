@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { parseVisionFrameWidth, parseAiTimeoutMs } from '../src/config.ts';
 import { ResponsesAI, parseVisionDetail } from '../src/ai/responses.ts';
 import { mockVision } from '../src/ai/mock.ts';
 import { videoFrames } from '../src/media/local-video.ts';
@@ -12,21 +13,23 @@ try {
   if (!video) throw new Error('Provide --video /path/to/clip.mp4 or VISION_VIDEO_PATH in .env');
   const mock = args.includes('--mock');
   if (mock && process.env.SIM !== '1') throw new Error('--mock requires explicit SIM=1');
+  const frameWidth = parseVisionFrameWidth(process.env.VISION_FRAME_WIDTH);
+  const timeoutMs = parseAiTimeoutMs(process.env.AI_TIMEOUT_MS);
   const detail = parseVisionDetail(process.env.OPENAI_VISION_DETAIL);
   const key = process.env.OPENAI_API_KEY ?? ''; const model = process.env.OPENAI_MODEL ?? '';
   if (!mock && (!key || !model)) throw new Error('Set OPENAI_API_KEY and OPENAI_MODEL in .env for real vision');
-  const ai = mock ? null : new ResponsesAI({ key, model, detail, baseURL: process.env.AI_BASE_URL ?? '' });
+  const ai = mock ? null : new ResponsesAI({ key, model, detail, timeoutMs, baseURL: process.env.AI_BASE_URL ?? '' });
   let index = 0;
-  const run = new VisionCalibration({ analyze: (image) => ai ? ai.vision(image) : Promise.resolve(mockVision(index++)), detail, model: mock ? 'mock' : model, mock, thresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) } });
+  const run = new VisionCalibration({ frameWidth, timeoutMs, analyze: (image) => ai ? ai.vision(image) : Promise.resolve(mockVision(index++)), detail, model: mock ? 'mock' : model, mock, thresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) } });
   const intervalSeconds = Number(option('--interval') ?? 4);
   const maxFrames = Number(option('--max-frames') ?? 120);
   let durationMs = 0;
   console.log(`SIMULATED · ${mock ? 'MOCK VISION' : 'REAL VISION'} · sampled input only · no OBS/Twitch actions`);
-  for await (const frame of videoFrames(video, { intervalSeconds, maxFrames })) {
+  for await (const frame of videoFrames(video, { intervalSeconds, maxFrames, frameWidth })) {
     durationMs = frame.durationMs;
     await run.sample(frame.image, frame.at);
     const row = run.report().frames.at(-1)!;
-    console.log(`Frame ${row.frame} · ${row.at}ms · score ${row.score} · ${row.analysis}`);
+    console.log(`Frame ${row.frame} · ${row.at}ms · score ${row.score} · ${row.analysis}${row.failureReason ? ` (${row.failureReason}${row.httpStatus ? `, HTTP ${row.httpStatus}` : ''})` : ''}`);
   }
   const report = run.report();
   const metadata = { sampleIntervalMs: intervalSeconds * 1000, durationMs, capped: report.frames.length < Math.ceil(durationMs / (intervalSeconds * 1000)) };
