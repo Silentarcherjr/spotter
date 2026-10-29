@@ -3,7 +3,7 @@ export interface TagOutState {
   phase: 'idle' | 'suggested' | 'confirming' | 'raiding' | 'covered' | 'tag-back' | 'home';
   lowSince: number | null; homeId: string | null; partnerId: string | null; returning: boolean; cancelPending: boolean;
 }
-export type TagOutEvent = { type: 'energy'; score: number | null } | { type: 'raid_confirmed'; fromId: string; toId: string } | { type: 'approve' | 'raid_started' | 'request_back' | 'cancel' | 'raid_cancelled' | 'failed' };
+export type TagOutEvent = { type: 'energy'; score: number | null } | { type: 'raid_confirmed'; fromId: string; toId: string } | { type: 'approve' | 'raid_started' | 'request_back' | 'cancel' | 'raid_cancelled' | 'failed' | 'cancel_failed' };
 export interface TagOutContext { now: number; broadcasterId: string; tokenOwnerId: string; sourceLive: boolean; crew: readonly Partner[]; recentRaids: readonly number[] }
 export type RaidAction = { type: 'start_raid'; targetId: string } | { type: 'cancel_raid' };
 export const initialTagOut = (): TagOutState => ({ phase: 'idle', lowSince: null, homeId: null, partnerId: null, returning: false, cancelPending: false });
@@ -34,7 +34,11 @@ export function transitionTagOut(previous: TagOutState, event: TagOutEvent, cont
     }
   }
   if (event.type === 'raid_started' && state.phase === 'confirming' && !state.cancelPending) state.phase = 'raiding';
-  if (event.type === 'raid_confirmed' && pending) {
+  if (event.type === 'raid_confirmed' && state.phase === 'idle' && event.toId === context.broadcasterId && context.crew.some((partner) => partner.id === event.fromId)) {
+    state = { ...state, phase: 'covered', homeId: event.fromId, partnerId: context.broadcasterId };
+  } else if (event.type === 'raid_confirmed' && state.phase === 'covered' && event.fromId === state.partnerId && event.toId === state.homeId && event.toId === context.broadcasterId) {
+    state = { ...state, phase: 'home' };
+  } else if (event.type === 'raid_confirmed' && pending) {
     const source = state.returning ? state.partnerId : state.homeId;
     const target = state.returning ? state.homeId : state.partnerId;
     if (event.fromId === source && event.toId === target) state = { ...state, phase: state.returning ? 'home' : 'covered', cancelPending: false };
@@ -45,6 +49,7 @@ export function transitionTagOut(previous: TagOutState, event: TagOutEvent, cont
     else if (state.phase === 'tag-back') state.phase = 'covered';
   }
   if (event.type === 'raid_cancelled' && pending) state = state.returning ? { ...state, phase: 'covered', cancelPending: false } : initialTagOut();
+  if (event.type === 'cancel_failed' && pending) state.cancelPending = false;
   if (event.type === 'failed' && pending) state = { ...state, phase: state.returning ? 'tag-back' : 'suggested', cancelPending: false };
   return { state, actions };
 }

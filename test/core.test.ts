@@ -140,3 +140,19 @@ test('moderation acts only on available high-confidence observations', async () 
   assert.equal(decideModeration({ guessing: true, confidence: .95 }), 'delete');
   assert.equal(decideModeration({ guessing: false, confidence: 1 }), 'none');
 });
+
+test('receiving partner recognizes a configured incoming raid and home recognizes tag back', () => {
+  const partnerContext = { broadcasterId: 'partner', tokenOwnerId: 'partner', sourceLive: true, crew: [{ id: 'main', live: true, energy: 20 }] };
+  const receiving = step(initialTagOut(), { type: 'raid_confirmed', fromId: 'main', toId: 'partner' }, partnerContext);
+  assert.equal(receiving.state.phase, 'covered');
+  assert.equal(receiving.state.homeId, 'main');
+  assert.equal(step(initialTagOut(), { type: 'raid_confirmed', fromId: 'unknown', toId: 'partner' }, partnerContext).state.phase, 'idle');
+  const pending = step(suggested(), { type: 'approve' }).state;
+  const covered = step(pending, { type: 'raid_confirmed', fromId: 'main', toId: 'partner' }).state;
+  assert.equal(step(covered, { type: 'raid_confirmed', fromId: 'partner', toId: 'main' }).state.phase, 'home');
+  const cancel = step(pending, { type: 'cancel' }).state;
+  const retry = step(cancel, { type: 'cancel_failed' });
+  assert.equal(retry.state.phase, 'confirming');
+  assert.equal(retry.state.cancelPending, false);
+  assert.deepEqual(step(retry.state, { type: 'cancel' }).actions, [{ type: 'cancel_raid' }]);
+});

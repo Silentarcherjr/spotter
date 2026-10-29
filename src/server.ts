@@ -1,5 +1,7 @@
 import { mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { parseCrewConfig } from './modules/tagout/crew.ts';
 import { createApp } from './app.ts';
 
 process.umask(0o077);
@@ -19,7 +21,8 @@ const obs = process.env.OBS_WEBSOCKET_PASSWORD ? {
   ...(process.env.OBS_BLUR_FILTER ? { blurFilter: process.env.OBS_BLUR_FILTER } : {}),
 } : undefined;
 const ai = process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL ? { key: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL } : undefined;
-const app = createApp({ databasePath, simulated: process.env.SIM === '1', ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
+const crew = process.env.CREW_FILE ? parseCrewConfig(JSON.parse(await readFile(process.env.CREW_FILE, 'utf8')) as unknown) : [];
+const app = createApp({ databasePath, simulated: process.env.SIM === '1', ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), crew, ...(process.env.CREW_SHARED_SECRET ? { crewToken: process.env.CREW_SHARED_SECRET } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => { void app.close(); });
 }

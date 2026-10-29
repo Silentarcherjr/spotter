@@ -65,3 +65,12 @@
 - Added pure, tested rally progression separate from energy and pure session report summaries; wired opt-in overlay stamina/rally and combined alert. Added report page and energy/chat curves.
 - Tests added before core/modules: numeric-only contract, sparse calibration, 150 Hz synthetic tone extraction, baseline persistence/staleness, rally separation/dedupe, reports and WebSocket accept/reject. Fixed a 30-second shutdown tail discovered in injected WebSocket testing by terminating sockets during preClose.
 - Verification: 34 tests expected with the new WebSocket test; typecheck/lint/build pass. No real microphone opened, no raw audio recorded/uploaded; real microphone/browser permission and live correlation proof remain HUMAN work.
+
+## 2026-10-29 — Phase 6 Tag Out implementation, real raid proof pending
+
+- Added authenticated loopback crew status polling that shares only energy/live status. Crew secrets/config stay under ignored data/; each broadcaster keeps their own OAuth token and approves actions in their own instance.
+- Extended core tests before code for receiving a known crew raid, confirming tag back at home, and retrying failed cancellation. Implemented these state transitions without I/O.
+- Added live relay orchestration: sustained low-energy suggestion, click-only approval, fresh Helix source/target live checks, token-owner guard through core, persisted request window, 90-second informational countdown and EventSub-only confirmation.
+- Ambiguous write failures remain confirming with an explicit cancel path; no automatic retry or false success. Added persisted relay state keyed by broadcaster, proved recovery across restart and isolation when account identity changes.
+- Added partner-side tag-back approval, cancel routes, crew config example and opt-in covering overlay. Display name comes from the raid event, never an inferred location.
+- Tests: private/loopback crew transport and unavailable data, approval/live guards, uncertain request cancellation, persisted state/attempts and authenticated minimal status endpoint. Real two-channel raid/recording remains a HUMAN requirement.

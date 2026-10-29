@@ -1,0 +1,7 @@
+[
+  {
+    "id": "PARTNER_TWITCH_USER_ID",
+    "endpoint": "http://127.0.0.1:3220/api/crew/status",
+    "token": "PARTNER_INSTANCE_SHARED_SECRET"
+  }
+]

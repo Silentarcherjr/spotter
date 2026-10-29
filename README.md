@@ -51,3 +51,13 @@ Open the sensor page and click **Enable local microphone**. Web Audio requests e
 Calibration needs ten minutes and at least 300 usable windows. A numeric-only baseline profile is stored locally and can be recalibrated. Keep the sensor page active: browsers may throttle background tabs, and too few frames produce no measurement. Sensor data older than five seconds is shown as unavailable. Energy is a personal heuristic, not a health or fatigue assessment.
 
 The rally meter uses chat messages and never changes measured energy. Enable the public HUD explicitly to show stamina/rally. The [session report](http://127.0.0.1:5173/dashboard/report.html) shows this session's energy/chat curves, peak/low and correlation. Live aggregate points are saved every 30 seconds; raw audio is never recorded or sent. The report currently covers the running server session.
+
+## Tag Out (two-channel proof pending)
+
+For the local hackathon crew, run one Spotter instance per broadcaster with separate API/Vite ports and SQLite files. Each authorizes its own Twitch account. Twitch tokens stay in that instance's local database; they are never sent to another instance.
+
+Copy `docs/crew.example.json` to `data/crew.json`, replace the partner's numeric Twitch user ID, local status endpoint and shared secret, then set `CREW_FILE=data/crew.json`. Set each instance's own `CREW_SHARED_SECRET` to a different private value and place that value in the other instance's crew config. The authenticated peer endpoint returns only energy/live status. Loopback endpoints only; this is not a hosted crew service. Configure the partner instance's own API/Vite ports, database path and OAuth redirect URI, and register that redirect in the Twitch app too.
+
+After two minutes of low available energy, core logic suggests a live high-energy crew member. A click rechecks both streams through Helix, verifies the source token owner and the persisted attempt window, then requests the raid. The UI waits for Twitch's raid event; the 90-second timer is informational. A timeout cannot claim success or retry automatically: check Twitch or cancel. Raid state and attempt history survive server restarts. The receiving partner can request tag back and must approve it using their own dashboard/token. With HUD opt-in, the receiving overlay shows the covering message.
+
+Human proof still required: two live authorized test channels, real raid and tag back, target raid settings and a recording. No real raid has been performed by these tests.

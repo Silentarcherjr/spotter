@@ -89,11 +89,11 @@ function render(state: Snapshot): void {
   text('chat', `${state.chat.messagesPerMinute} messages/min · ${state.chat.uniqueChattersPerMinute} unique chatters/min`);
   text('correlation', state.correlation === null ? 'Correlation needs paired stream samples.' : `Energy / chat correlation: ${state.correlation.toFixed(2)} · association, not causation`);
   text('partner', state.crew[0] ? `Crew partner · ${state.crew[0].energy}% energy` : 'No crew connected');
-  text('raid-phase', state.tagout.phase === 'raiding' ? 'Simulated countdown · waiting for raid event' : state.tagout.phase);
+  text('raid-phase', state.tagout.phase === 'raiding' ? state.simulated ? 'Simulated countdown · waiting for raid event' : `${(state as unknown as { countdownSeconds: number }).countdownSeconds}s · waiting for Twitch raid event` : state.tagout.phase);
   hidden('combined', !state.combinedAlert); hidden('dismiss', !state.exposure.active && !(state as unknown as { privacyActive?: boolean }).privacyActive);
-  hidden('approve', !['suggested', 'tag-back'].includes(state.tagout.phase));
-  text('approve', state.tagout.phase === 'tag-back' ? 'Partner: approve simulated tag back' : 'Approve simulated raid');
-  hidden('cancel', !['suggested', 'confirming', 'raiding', 'tag-back'].includes(state.tagout.phase)); hidden('back', state.tagout.phase !== 'covered');
+  hidden('approve', !['suggested', 'tag-back'].includes(state.tagout.phase) || (!state.simulated && !(state as unknown as { canApprove: boolean }).canApprove));
+  text('approve', state.tagout.phase === 'tag-back' ? state.simulated ? 'Partner: approve simulated tag back' : 'Approve tag back from this channel' : state.simulated ? 'Approve simulated raid' : 'Approve raid from this channel');
+  hidden('cancel', !['suggested', 'confirming', 'raiding', 'tag-back'].includes(state.tagout.phase)); hidden('back', state.tagout.phase !== 'covered' || (!state.simulated && !(state as unknown as { coveringFor: string | null }).coveringFor));
   const clues = element('clues');
   clues?.replaceChildren(...state.clues.map((clue) => { const li = document.createElement('li'); li.textContent = `${clue.description} · ${Math.round(clue.confidence * 100)}%`; return li; }));
   const timeline = element('timeline');
@@ -105,11 +105,11 @@ async function refresh(): Promise<void> {
   try {
     const response = await fetch(page === 'overlay' ? '/api/overlay' : '/api/status');
     if (!response.ok) throw new Error('Unavailable');
-    const state = await response.json() as Snapshot & { enabled?: boolean; phase?: string };
+    const state = await response.json() as Snapshot & { enabled?: boolean; phase?: string; coveringFor?: string | null };
     isSimulated = state.simulated;
     hidden('simulated', !state.simulated);
     if (page === 'overlay') {
-      hidden('hud-content', !state.enabled); meter('energy-meter', state.energy ?? 0); text('raid-phase', state.phase ?? '');
+      hidden('hud-content', !state.enabled); meter('energy-meter', state.energy ?? 0); text('raid-phase', state.coveringFor ? `Covering for ${state.coveringFor}’s community` : state.phase ?? '');
       text('rally', state.rally?.celebrating ? 'RALLY! Your community is here for you.' : `Rally ${state.rally?.meter ?? 0}%`);
     } else {
       text('connection', state.simulated ? '● Demo session · accelerated time' : '● Local session · integrations disconnected');

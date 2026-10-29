@@ -16,8 +16,11 @@ import { initialTagOut } from './core/tagout.ts';
 import { SecondWind, parseNumericFeatures } from './modules/secondwind/runtime.ts';
 import { combinedAlert } from './core/chat.ts';
 import { sessionReport } from './core/session.ts';
+import { TagOut } from './modules/tagout/runtime.ts';
+import { pollCrew } from './modules/tagout/crew.ts';
+import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; ai?: AIConfig }) {
+export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
@@ -60,6 +63,22 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   }, notify: async (_id) => { /* Audit is the private mod notice, exposed on the dashboard. */ } }) : null;
   if (secondwind) twitch?.setActivityHandler((id, at, userId) => secondwind.chat(id, at, userId));
   if (guard) twitch?.setChatHandler((id, message, at) => guard.check(id, message, at));
+  const tagout = twitch ? new TagOut(database, {
+    identity: () => { const id = twitch.auth.identity?.userId; return id ? { broadcasterId: id, tokenOwnerId: id, sourceLive: twitch.snapshot().live === true } : null; },
+    live: async (id) => (await twitch.helix.streams(id)).data.some((stream) => stream.user_id === id && stream.type === 'live'),
+    start: (from, to) => twitch.helix.startRaid(from, to), cancel: (id) => twitch.helix.cancelRaid(id),
+    knownIds: (options.crew ?? []).map((peer) => peer.id),
+  }) : null;
+  twitch?.setRaidHandler((from, to, at) => tagout?.confirm(from, to, at));
+  let closing = false;
+  let crewBusy = false;
+  let crewTimer: ReturnType<typeof setInterval> | undefined;
+  const updateCrew = async () => {
+    if (closing || crewBusy || !tagout) return;
+    crewBusy = true;
+    try { const crew = await pollCrew(options.crew ?? []); if (!closing) tagout.update(secondwind?.snapshot(Date.now()).energy ?? null, crew, Date.now()); }
+    finally { crewBusy = false; }
+  };
   let visionTimer: ReturnType<typeof setInterval> | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
   let hudEnabled = false;
@@ -67,10 +86,11 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   app.addHook('onReady', async () => {
     await twitch?.start();
     if (obs) void obs.start();
+    if (tagout) { void updateCrew(); crewTimer = setInterval(() => { void updateCrew(); }, 5_000); crewTimer.unref(); }
     if (offthemap) { visionTimer = setInterval(() => { void offthemap.sample(Date.now()); }, 4_000); visionTimer.unref(); }
     if (demo) { frames = await loadFrameFolder(true, options.frameDirectory ?? fileURLToPath(new URL('../test/fixtures/frames', import.meta.url))); demo.tick(); timer = setInterval(() => demo?.tick(), 4_000); timer.unref(); }
   });
-  app.addHook('onClose', async () => { clearInterval(timer); clearInterval(visionTimer); twitch?.stop(); await obs?.stop(); database.close(); });
+  app.addHook('onClose', async () => { closing = true; clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     if ((!['GET', 'HEAD'].includes(request.method) || request.url === '/api/sensor') && request.headers.origin) {
@@ -80,10 +100,20 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   });
   app.get('/api/overlay', async () => {
     if (!hudEnabled) return { simulated: options.simulated, enabled: false };
-    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, rally: demo.snapshot().rally };
+    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, rally: demo.snapshot().rally, coveringFor: demo.snapshot().tagout.phase === 'covered' ? 'Main streamer' : null };
     const energy = secondwind!.snapshot(Date.now());
-    return { simulated: false, enabled: true, energy: energy.energy, rally: energy.rally, phase: 'idle' };
+    return { simulated: false, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', coveringFor: tagout?.snapshot(Date.now()).coveringFor ? twitch?.displayName(tagout.snapshot(Date.now()).coveringFor!) : null };
   });
+  app.get('/api/crew/status', async (request, reply) => {
+    if (!options.crewToken || request.headers.authorization !== `Bearer ${options.crewToken}` || !secondwind) return reply.code(401).send({ error: 'Crew authorization required' });
+    return { live: twitch?.snapshot().live ?? null, energy: secondwind.snapshot(Date.now()).energy };
+  });
+  for (const action of ['approve', 'cancel', 'requestBack'] as const) {
+    app.post(`/api/relay/${action}`, async (_request, reply) => {
+      if (!tagout) return reply.code(503).send({ error: 'Twitch authorization required' });
+      await tagout[action](Date.now()); return tagout.snapshot(Date.now());
+    });
+  }
   app.post('/api/calibration/reset', async () => { secondwind?.resetCalibration(); return { reset: true }; });
   app.get('/api/report', async () => ({ simulated: options.simulated, ...(demo ? sessionReport(demo.snapshot().curves) : secondwind!.report()) }));
   app.post<{ Body: { enabled: boolean } }>('/api/hud', {
@@ -133,6 +163,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     analysis: 'analysis unavailable',
     exposure: { score: 0, active: false, dismissed: false, analysis: 'analysis unavailable' },
     crew: [], tagout: initialTagOut(), timeline: [], clues: [],
+    ...(tagout?.snapshot(Date.now()) ?? {}),
     ...secondwind!.snapshot(Date.now()),
     combinedAlert: combinedAlert(secondwind!.snapshot(Date.now()).energy, offthemap?.snapshot().exposure.score ?? null, offthemap?.snapshot().analysis === 'available'),
     ...(offthemap?.snapshot() ?? {}),

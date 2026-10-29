@@ -13,10 +13,14 @@ export class TwitchRuntime {
   private client: EventSubClient | null = null;
   private validation: ReturnType<typeof setInterval> | undefined;
   private chats: ChatActivity[] = [];
+  private names = new Map<string, string>();
+  displayName(id: string): string { return this.names.get(id) ?? id; }
   private online = false;
   private status = 'authorization required';
   private connected = false;
   private closed = false;
+  private raidHandler: ((from: string, to: string, at: number) => void) | null = null;
+  setRaidHandler(handler: (from: string, to: string, at: number) => void): void { this.raidHandler = handler; }
   private activityHandler: ((id: string, at: number, userId: string) => void) | null = null;
   setActivityHandler(handler: (id: string, at: number, userId: string) => void): void { this.activityHandler = handler; }
   private chatHandler: ((id: string, message: string, at: number) => Promise<void>) | null = null;
@@ -53,6 +57,11 @@ export class TwitchRuntime {
       const content = event.message as { text?: unknown } | undefined;
       if (typeof content?.text === 'string' && this.chatHandler) void this.chatHandler(event.message_id, content.text, notification.at).catch(() => {});
       this.chats = [...this.chats.filter((chat) => notification.at - chat.at <= 60_000), { id: event.message_id, userId: event.chatter_user_id, at: notification.at }].slice(-10_000);
+    }
+    if (notification.type === 'channel.raid' && typeof event.from_broadcaster_user_id === 'string' && typeof event.to_broadcaster_user_id === 'string') {
+      if (typeof event.from_broadcaster_user_name === 'string') this.names.set(event.from_broadcaster_user_id, event.from_broadcaster_user_name);
+      if (this.names.size > 100) this.names.delete(this.names.keys().next().value!);
+      this.raidHandler?.(event.from_broadcaster_user_id, event.to_broadcaster_user_id, notification.at);
     }
     if (notification.type === 'stream.online' && event.broadcaster_user_id === id) this.online = true;
     if (notification.type === 'stream.offline' && event.broadcaster_user_id === id) this.online = false;
