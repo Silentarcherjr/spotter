@@ -18,3 +18,11 @@
 - Tests added: API health/status with real vs simulated flags; process-level dev startup, all three pages, API proxy and process shutdown.
 - Live bug: Node --watch hit EMFILE here. Added a failing regression first, removed the server watcher and configured Vite polling; README documents manual server restart. Sandbox also blocks listening on localhost, so startup verification requires network-enabled execution.
 - SIM mode currently labels the scaffold only; full scripted demo is phase 2. No credentials or external service calls used.
+
+## 2026-10-29 — Phase 1 pure decision core (tests first)
+
+- Added failing tests before implementation for findability decay/combination/deduplication, inclusive warning/action thresholds, dismiss/rearm, unavailable analysis, ten-minute personal audio calibration, z-score smoothing, chat velocity/correlation, combined alert and Tag Out approval/cancel/confirmation/rate limits.
+- Implemented pure modules in src/core/{types,exposure,energy,chat,tagout}.ts with explicit timestamps and no I/O. Thresholds and scores are initial deterministic heuristics, not validated safety or health measurements.
+- Added the vision contract in src/ai/vision-contract.ts. Descriptions are an allowlist of generic phrases; runtime parsing drops descriptions entirely and rejects extra fields, literal text, invalid severity/confidence or category/description mismatch. Recursive schema regression forbids location/text keys and open objects.
+- Added a gated simulation event factory in src/sim/events.ts; simulated:false cannot override the mandatory true flag.
+- Verification: 14 tests pass (11 core/contract tests plus 3 scaffold tests); typecheck and lint pass. No live integrations or automatic external actions performed.

@@ -1,0 +1,134 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { scoreFindability, decideExposure, dismissExposure, initialExposure } from '../src/core/exposure.ts';
+import { calibrate, scoreEnergy } from '../src/core/energy.ts';
+import { chatVelocity, correlation, combinedAlert } from '../src/core/chat.ts';
+import { initialTagOut, transitionTagOut, choosePartner } from '../src/core/tagout.ts';
+import type { Clue, AudioFeatures } from '../src/core/types.ts';
+
+const clue = (category: Clue['category'], severity = 3, confidence = 1): Clue => ({ category, severity, confidence });
+const audio = (at: number, rms = .2, pitchRange = 50, speechRate = 3): AudioFeatures => ({ at, rms, pitchMedian: 150, pitchRange, spectralSlope: -2, voicedRatio: .7, pauseLength: .2, speechRate });
+
+test('findability combines distinct clues over frames and decays without mutating history', () => {
+  const history = [{ at: 0, clues: [clue('storefront')] }];
+  const original = structuredClone(history);
+  const alone = scoreFindability([clue('transit')], [], 4_000);
+  const combined = scoreFindability([clue('transit')], history, 4_000);
+  assert.ok(combined > alone);
+  assert.ok(scoreFindability([], history, 30_000) < scoreFindability([], history, 0));
+  assert.equal(scoreFindability([], history, 121_000), 0);
+  assert.deepEqual(history, original);
+});
+
+test('findability deduplicates categories, clamps, excludes future and invalid observations', () => {
+  assert.equal(scoreFindability([clue('storefront'), clue('storefront')], [], 0), scoreFindability([clue('storefront')], [], 0));
+  assert.equal(scoreFindability([clue('storefront', 5), clue('transit', 5), clue('reflection', 5)], [], 0), 100);
+  assert.equal(scoreFindability([clue('transit', 5, Number.NaN)], [{ at: 20, clues: [clue('storefront')] }], 0), 0);
+  assert.equal(scoreFindability([clue('transit', 9)], [], 0), 0);
+});
+
+test('exposure thresholds are inclusive; unavailable keeps score and never acts', () => {
+  const warning = decideExposure(initialExposure(), 60);
+  assert.deepEqual(warning.actions, ['warn']);
+  const acting = decideExposure(warning.state, 80);
+  assert.deepEqual(acting.actions, ['privacy', 'marker']);
+  assert.deepEqual(decideExposure(acting.state, 90).actions, []);
+  const missing = decideExposure(acting.state, null);
+  assert.equal(missing.state.score, 80);
+  assert.equal(missing.state.analysis, 'analysis unavailable');
+  assert.deepEqual(missing.actions, []);
+  assert.deepEqual(decideExposure(initialExposure(), Number.NaN).actions, []);
+  const dismissed = dismissExposure(acting.state);
+  assert.equal(dismissed.active, false);
+  assert.deepEqual(decideExposure(dismissed, 100).actions, []);
+  const recovered = decideExposure(dismissed, 10).state;
+  assert.deepEqual(decideExposure(recovered, 80).actions, ['privacy', 'marker']);
+  assert.throws(() => decideExposure(initialExposure(), 80, { warn: 90, act: 60 }));
+});
+
+test('energy calibrates against ten minutes of personal samples and smooths recent observations', () => {
+  assert.equal(calibrate([audio(0), audio(500_000)], 500_000).baseline, null);
+  const calibration = calibrate([audio(0), audio(300_000), audio(600_000)], 600_000);
+  assert.equal(calibration.progress, 1);
+  assert.ok(calibration.baseline);
+  const baseline = calibration.baseline;
+  const normal = scoreEnergy([audio(610_000)], baseline, 610_000);
+  const low = scoreEnergy([audio(610_000, .08, 10, .5)], baseline, 610_000);
+  const smoothed = scoreEnergy([audio(600_000), audio(610_000, .08, 10, .5)], baseline, 610_000);
+  assert.equal(normal, 75);
+  assert.ok(low !== null && smoothed !== null && normal !== null && low < smoothed && smoothed < normal);
+  assert.equal(scoreEnergy([audio(0)], baseline, 700_000), null);
+  assert.equal(scoreEnergy([audio(610_000)], null, 610_000), null);
+  assert.equal(scoreEnergy([audio(610_000, Number.NaN)], baseline, 610_000), null);
+});
+
+test('chat velocity deduplicates event IDs and measures unique chatters in a sliding minute', () => {
+  assert.deepEqual(chatVelocity([
+    { id: 'a', userId: 'one', at: 10_000 }, { id: 'a', userId: 'one', at: 10_000 },
+    { id: 'b', userId: 'one', at: 20_000 }, { id: 'c', userId: 'two', at: 30_000 },
+    { id: 'old', userId: 'three', at: 0 }, { id: 'future', userId: 'four', at: 90_000 },
+  ], 65_000), { messagesPerMinute: 3, uniqueChattersPerMinute: 2 });
+});
+
+test('correlation requires paired nonconstant data and combined alerts require available readings', () => {
+  assert.equal(correlation([{ energy: 10, chat: 10 }, { energy: 20, chat: 20 }]), null);
+  assert.equal(correlation([{ energy: 10, chat: 10 }, { energy: 20, chat: 20 }, { energy: 30, chat: 30 }]), 1);
+  assert.equal(correlation([{ energy: 10, chat: 1 }, { energy: 20, chat: 1 }, { energy: 30, chat: 1 }]), null);
+  assert.equal(combinedAlert(25, 80, true), true);
+  assert.equal(combinedAlert(25, 80, false), false);
+  assert.equal(combinedAlert(null, 80, true), false);
+});
+
+const crew = [{ id: 'partner', live: true, energy: 90 }, { id: 'offline', live: false, energy: 100 }];
+const context = { now: 200_000, broadcasterId: 'main', tokenOwnerId: 'main', sourceLive: true, crew, recentRaids: [] as number[] };
+const step = (state: ReturnType<typeof initialTagOut>, event: Parameters<typeof transitionTagOut>[1], extra = {}) => transitionTagOut(state, event, { ...context, ...extra });
+
+test('Tag Out selects a live partner after sustained low energy; no automatic raid', () => {
+  assert.equal(choosePartner(crew)?.id, 'partner');
+  const first = step(initialTagOut(), { type: 'energy', score: 20 });
+  assert.equal(first.state.phase, 'idle');
+  const second = step(first.state, { type: 'energy', score: 20 }, { now: 321_000 });
+  assert.equal(second.state.phase, 'suggested');
+  assert.deepEqual(second.actions, []);
+  assert.equal(step(second.state, { type: 'raid_started' }).state.phase, 'suggested');
+});
+
+function suggested() {
+  return step(step(initialTagOut(), { type: 'energy', score: 20 }).state, { type: 'energy', score: 20 }, { now: 321_000 }).state;
+}
+
+test('Tag Out requires approval, validates raid limits and confirms matching EventSub direction', () => {
+  const suggestion = suggested();
+  assert.deepEqual(step(suggestion, { type: 'approve' }, { tokenOwnerId: 'other' }).actions, []);
+  assert.deepEqual(step(suggestion, { type: 'approve' }, { sourceLive: false }).actions, []);
+  assert.deepEqual(step(suggestion, { type: 'approve' }, { crew: [] }).actions, []);
+  assert.deepEqual(step(suggestion, { type: 'approve' }, { recentRaids: Array(10).fill(190_000) }).actions, []);
+  const approved = step(suggestion, { type: 'approve' });
+  assert.equal(approved.state.phase, 'confirming');
+  assert.deepEqual(approved.actions, [{ type: 'start_raid', targetId: 'partner' }]);
+  const raiding = step(approved.state, { type: 'raid_started' });
+  assert.equal(raiding.state.phase, 'raiding');
+  assert.deepEqual(step(raiding.state, { type: 'approve' }).actions, []);
+  assert.equal(step(raiding.state, { type: 'raid_confirmed', fromId: 'stranger', toId: 'partner' }).state.phase, 'raiding');
+  const covered = step(raiding.state, { type: 'raid_confirmed', fromId: 'main', toId: 'partner' });
+  assert.equal(covered.state.phase, 'covered');
+  const returning = step(covered.state, { type: 'request_back' });
+  assert.equal(returning.state.phase, 'tag-back');
+  assert.deepEqual(step(returning.state, { type: 'approve' }).actions, []);
+  const partnerContext = { broadcasterId: 'partner', tokenOwnerId: 'partner', crew: [{ id: 'main', live: true, energy: 80 }] };
+  const back = step(returning.state, { type: 'approve' }, partnerContext);
+  assert.deepEqual(back.actions, [{ type: 'start_raid', targetId: 'main' }]);
+  const home = step(back.state, { type: 'raid_confirmed', fromId: 'partner', toId: 'main' }, partnerContext);
+  assert.equal(home.state.phase, 'home');
+});
+
+test('Tag Out supports cancellation and failure without stuck approval or accidental retry', () => {
+  assert.equal(step(suggested(), { type: 'cancel' }).state.phase, 'idle');
+  const pending = step(suggested(), { type: 'approve' }).state;
+  const canceled = step(pending, { type: 'cancel' });
+  assert.equal(canceled.state.phase, 'confirming');
+  assert.deepEqual(canceled.actions, [{ type: 'cancel_raid' }]);
+  assert.equal(step(canceled.state, { type: 'raid_cancelled' }).state.phase, 'idle');
+  assert.deepEqual(step(canceled.state, { type: 'approve' }).actions, []);
+  assert.equal(step(pending, { type: 'failed' }).state.phase, 'suggested');
+});
