@@ -10,7 +10,7 @@ test('service endpoints and OBS imports remain inside their authorized adapters;
   for (const path of (await sources('src')).filter((path) => path.endsWith('.ts'))) {
     const source = await readFile(path, 'utf8');
     if (/https:\/\/(api|id)\.twitch\.tv/.test(source)) assert.ok(path.startsWith('src/twitch/'), path);
-    if (/https:\/\/api\.openai\.com/.test(source)) assert.ok(path.startsWith('src/ai/'), path);
+    if (/https:\/\/(?:api\.openai\.com|openrouter\.ai)/.test(source)) assert.ok(path.startsWith('src/ai/'), path);
     if (/from ['"]obs-websocket-js/.test(source)) assert.ok(path.startsWith('src/obs/'), path);
     if (path.startsWith('src/core/')) {
       for (const match of source.matchAll(/from ['"]([^'"]+)['"]/g)) assert.ok(match[1]?.startsWith('./'), `${path}: core imports an I/O layer`);

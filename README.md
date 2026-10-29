@@ -88,13 +88,32 @@ Native WebSocket EventSub handles chat, both raid directions and online/offline 
 
 Offline fixtures are synthetic shapes based on official docs, **not CLI captures**. Twitch CLI is not installed here. Complete its fixture/live steps in [the human verification checklist](docs/LIVE_CHECKLIST.md).
 
+## AI endpoint: direct OpenAI or OpenRouter
+
+`AI_BASE_URL` defaults to `https://api.openai.com/v1`. The client appends `/responses`, accepting a trailing slash. This configuration applies to both the live server and `npm run calibrate`, and to vision and chat classification. Existing OpenAI setups work without setting this variable.
+
+For OpenRouter, configure `.env` as follows:
+
+```dotenv
+AI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_API_KEY=your-openrouter-key
+OPENAI_MODEL=proveedor/modelo
+OPENAI_VISION_DETAIL=high
+```
+
+`proveedor/modelo` is a placeholder for the exact OpenRouter model ID: a provider/author prefix, slash, then model name (for example the shape `openai/<model-id>`). Choose a listed model supporting **image input and strict JSON Schema**. Keep using the existing `OPENAI_API_KEY`/`OPENAI_MODEL` variable names; set the key for the selected service. For direct OpenAI, use an OpenAI key and the native model ID without OpenRouter's provider prefix.
+
+Only the exact `openrouter.ai` host receives `provider: { require_parameters: true }`. Requests retain image input, `text.format` with strict `json_schema`, and `store: false`; Spotter never retries by dropping the schema or routing preference. OpenRouter's parameter filter requests compatible routing; model/provider support and schema enforcement can still vary. A rejected schema/unsupported provider is handled as `analysis unavailable`: retain the last exposure score and execute no new automatic action. Runtime observation validation stays enabled. This behavior is covered with mocked requests; a live OpenRouter account has not been exercised.
+
+See [OpenRouter Responses](https://openrouter.ai/docs/api/reference/responses/overview), [provider routing](https://openrouter.ai/docs/guides/routing/provider-selection) and [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs).
+
 ## Off the Map
 
 Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples 768px JPEGs every four seconds.
 
 The schema contains clue categories, generic allowlisted descriptions, severity and confidence. Runtime parsing rejects extra fields, literal text, invalid values, refusals and incomplete responses. Core scoring combines distinct categories over time with decay. Configure `EXPOSURE_WARN`/`EXPOSURE_ACT` (defaults 60/80). A warning stays private; an action applies privacy and requests a marker. Missing analysis retains the score and cannot trigger an action. Dismiss restores the previous scene/filter state; restoration failure remains retryable.
 
-The Responses request sets `store: false`. Images exist only in memory; the overlay receives no exposure/clue data. Provider-side handling follows your API account's data controls: this setting is not a claim of zero provider retention.
+The Responses request sets `store: false`. Images exist only in memory; the overlay receives no exposure/clue data. Provider-side handling follows the selected service/account's data controls: this setting is not a claim of zero provider retention.
 
 Chat Guard runs when Twitch and AI are configured. Pure core logic decides high-confidence guessing-message deletion. The private mod audit records message IDs, timestamps and outcomes before deletion; it never retains message text. Sensitive terms entered in the dashboard go to Twitch blocked terms without local storage. Keep their returned IDs for removal.
 
@@ -149,7 +168,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**53 automated tests (53 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**61 automated tests (61 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test

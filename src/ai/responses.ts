@@ -7,16 +7,27 @@ export function parseVisionDetail(value: string | undefined): VisionDetail {
   if (value !== 'low' && value !== 'high' && value !== 'auto') throw new Error('OPENAI_VISION_DETAIL must be low, high or auto');
   return value;
 }
-export interface AIConfig { detail?: VisionDetail; key: string; model: string; fetcher?: typeof fetch }
+export interface AIConfig { baseURL?: string; detail?: VisionDetail; key: string; model: string; fetcher?: typeof fetch }
 const chatSchema = { type: 'object', additionalProperties: false, required: ['guessing', 'confidence'], properties: { guessing: { type: 'boolean' }, confidence: { type: 'number', minimum: 0, maximum: 1 } } };
 export class ResponsesAI {
   private config: AIConfig;
-  constructor(config: AIConfig) { this.config = { ...config, detail: parseVisionDetail(config.detail) }; }
+  private endpoint: string;
+  private openRouter: boolean;
+  constructor(config: AIConfig) {
+    let base: URL;
+    try { base = new URL(config.baseURL?.trim() || 'https://api.openai.com/v1'); }
+    catch { throw new Error('Invalid AI_BASE_URL'); }
+    if (!['https:', 'http:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) throw new Error('Invalid AI_BASE_URL');
+    this.openRouter = base.hostname === 'openrouter.ai';
+    base.pathname = `${base.pathname.replace(/\/+$/, '')}/responses`;
+    this.endpoint = base.toString();
+    this.config = { ...config, detail: parseVisionDetail(config.detail) };
+  }
   private async observe(prompt: string, content: unknown[], name: string, schema: unknown): Promise<unknown> {
     if (!this.config.key || !this.config.model) throw new Error('AI is not configured');
-    const response = await (this.config.fetcher ?? fetch)('https://api.openai.com/v1/responses', {
+    const response = await (this.config.fetcher ?? fetch)(this.endpoint, {
       method: 'POST', headers: { Authorization: `Bearer ${this.config.key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: this.config.model, store: false, instructions: prompt, input: [{ role: 'user', content }], text: { format: { type: 'json_schema', name, strict: true, schema } }, max_output_tokens: 1200 }),
+      body: JSON.stringify({ model: this.config.model, store: false, ...(this.openRouter ? { provider: { require_parameters: true } } : {}), instructions: prompt, input: [{ role: 'user', content }], text: { format: { type: 'json_schema', name, strict: true, schema } }, max_output_tokens: 1200 }),
       signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok) throw new Error('analysis unavailable');

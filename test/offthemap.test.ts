@@ -106,3 +106,58 @@ for (const detail of [undefined, 'low', 'high', 'auto'] as const) {
 test('invalid vision detail is rejected before any network call', () => {
   assert.throws(() => new ResponsesAI({ key: 'fake-key', model: 'configured-model', detail: 'invalid' as 'high' }));
 });
+
+for (const [baseURL, endpoint, routed] of [
+  [undefined, 'https://api.openai.com/v1/responses', false],
+  ['https://api.openai.com/v1/', 'https://api.openai.com/v1/responses', false],
+  ['https://openrouter.ai/api/v1', 'https://openrouter.ai/api/v1/responses', true],
+  ['https://openrouter.ai/api/v1/', 'https://openrouter.ai/api/v1/responses', true],
+  ['https://openrouter.ai.example/v1', 'https://openrouter.ai.example/v1/responses', false],
+  ['https://gateway.example/v1', 'https://gateway.example/v1/responses', false],
+] as const) {
+  test(`Responses routing contract for ${baseURL ?? 'default OpenAI'}`, async () => {
+    let calls = 0;
+    const ai = new ResponsesAI({ key: 'fake-key', model: 'provider/model', ...(baseURL ? { baseURL } : {}), fetcher: async (url, init) => {
+      calls++;
+      assert.equal(String(url), endpoint);
+      const body = JSON.parse(init?.body as string) as { store: boolean; model: string; provider?: unknown; text: { format: { type: string; strict: boolean } }; input: { content: { type: string }[] }[] };
+      assert.equal(body.store, false);
+      assert.equal(body.model, 'provider/model');
+      assert.equal(body.text.format.type, 'json_schema');
+      assert.equal(body.text.format.strict, true);
+      assert.deepEqual(body.provider, routed ? { require_parameters: true } : undefined);
+      assert.equal(Object.hasOwn(body, 'provider'), routed);
+      const image = body.input[0]?.content[0]?.type === 'input_image';
+      return completed(image ? { clues: [] } : { guessing: false, confidence: .9 });
+    } });
+    assert.deepEqual(await ai.vision('data:image/jpeg;base64,AA=='), []);
+    assert.deepEqual(await ai.classifyChat('ordinary fixture'), { guessing: false, confidence: .9 });
+    assert.equal(calls, 2);
+  });
+}
+
+test('OpenRouter schema rejection retains the score and cannot cause a new automatic action', async () => {
+  let rejected = false;
+  let actions = 0;
+  const ai = new ResponsesAI({ key: 'fake-key', model: 'provider/model', baseURL: 'https://openrouter.ai/api/v1', fetcher: async () => rejected
+    ? new Response(JSON.stringify({ error: { message: 'private upstream schema detail' } }), { status: 400 })
+    : completed({ clues: [{ category: 'transit', description: 'Transit identifier visible', severity: 5, confidence: 1 }, { category: 'storefront', description: 'Identifying storefront visible', severity: 5, confidence: 1 }] }),
+  });
+  const module = new OffTheMap({ capture: async () => 'data:image/jpeg;base64,AA==', analyze: (image) => ai.vision(image), privacy: async () => { actions++; }, marker: async () => { actions++; }, restore: async () => {} });
+  await module.sample(0);
+  const score = module.snapshot().exposure.score;
+  assert.equal(score, 93); assert.equal(actions, 2);
+  rejected = true;
+  await module.sample(4000);
+  assert.equal(module.snapshot().exposure.score, score);
+  assert.equal(module.snapshot().analysis, 'analysis unavailable');
+  assert.equal(actions, 2);
+  await assert.rejects(ai.classifyChat('ordinary fixture'), { message: 'analysis unavailable' });
+  assert.doesNotMatch(JSON.stringify(module.snapshot()), /private upstream/);
+});
+
+test('invalid AI base URLs fail before any request', () => {
+  for (const baseURL of ['not-a-url', 'file:///tmp/api', 'https://user:password@openrouter.ai/api/v1', 'https://openrouter.ai/api/v1?key=secret']) {
+    assert.throws(() => new ResponsesAI({ key: 'fake-key', model: 'provider/model', baseURL }));
+  }
+});

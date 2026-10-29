@@ -15,7 +15,7 @@ try {
   const detail = parseVisionDetail(process.env.OPENAI_VISION_DETAIL);
   const key = process.env.OPENAI_API_KEY ?? ''; const model = process.env.OPENAI_MODEL ?? '';
   if (!mock && (!key || !model)) throw new Error('Set OPENAI_API_KEY and OPENAI_MODEL in .env for real vision');
-  const ai = mock ? null : new ResponsesAI({ key, model, detail });
+  const ai = mock ? null : new ResponsesAI({ key, model, detail, baseURL: process.env.AI_BASE_URL ?? '' });
   let index = 0;
   const run = new VisionCalibration({ analyze: (image) => ai ? ai.vision(image) : Promise.resolve(mockVision(index++)), detail, model: mock ? 'mock' : model, mock, thresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) } });
   const intervalSeconds = Number(option('--interval') ?? 4);

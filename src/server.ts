@@ -21,7 +21,7 @@ const obs = process.env.OBS_WEBSOCKET_PASSWORD ? {
   ...(process.env.OBS_SOURCE ? { source: process.env.OBS_SOURCE } : {}),
   ...(process.env.OBS_BLUR_FILTER ? { blurFilter: process.env.OBS_BLUR_FILTER } : {}),
 } : undefined;
-const ai = process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL ? { key: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL, detail: parseVisionDetail(process.env.OPENAI_VISION_DETAIL) } : undefined;
+const ai = process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL ? { baseURL: process.env.AI_BASE_URL ?? '', key: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL, detail: parseVisionDetail(process.env.OPENAI_VISION_DETAIL) } : undefined;
 const crew = process.env.CREW_FILE ? parseCrewConfig(JSON.parse(await readFile(process.env.CREW_FILE, 'utf8')) as unknown) : [];
 const app = createApp({ databasePath, simulated: process.env.SIM === '1', ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), crew, exposureThresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) }, ...(process.env.CREW_SHARED_SECRET ? { crewToken: process.env.CREW_SHARED_SECRET } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
