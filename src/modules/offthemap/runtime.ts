@@ -1,3 +1,4 @@
+import type { TelemetryEvent } from '../../presentation/telemetry.ts';
 import { decideExposure, dismissExposure, initialExposure, scoreFindability } from '../../core/exposure.ts';
 import type { Clue, FrameObservation } from '../../core/types.ts';
 import { clueDescriptions } from '../../ai/vision-contract.ts';
@@ -8,6 +9,8 @@ export class OffTheMap {
   private thresholds: { warn: number; act: number };
   private exposure = initialExposure();
   private frames: FrameObservation[] = [];
+  private lastPreview: { image: string; at: number; clues: Clue[] } | null = null;
+  preview() { return this.lastPreview ? structuredClone(this.lastPreview) : null; }
   private busy = false;
   private dismissing = false;
   private privacyPending: Promise<void> | null = null;
@@ -17,6 +20,7 @@ export class OffTheMap {
   private markerStatus: 'idle' | 'created' | 'unavailable' = 'idle';
   private markerHttpStatus: number | null = null;
   private lastMarker: { id: string; positionSeconds: number; createdAt: string } | null = null;
+  private presentationEvents: TelemetryEvent[] = [];
   private timeline: { at: number; score: number; actions: string[]; simulated: false }[] = [];
   constructor(dependencies: Dependencies, thresholds = { warn: 60, act: 80 }) { this.dependencies = dependencies; this.thresholds = thresholds; decideExposure(this.exposure, 0, thresholds); }
   async sample(now: number): Promise<void> {
@@ -24,10 +28,11 @@ export class OffTheMap {
     this.busy = true;
     const revision = this.revision;
     try {
-      let clues: Clue[];
-      try { clues = await this.dependencies.analyze(await this.dependencies.capture()); }
-      catch { this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
-      if (revision !== this.revision || this.dependencies.available?.() === false) { this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
+      let clues: Clue[]; let image: string;
+      try { image = await this.dependencies.capture(); clues = await this.dependencies.analyze(image); }
+      catch { this.lastPreview = null; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
+      if (revision !== this.revision || this.dependencies.available?.() === false) { this.lastPreview = null; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
+      this.lastPreview = /^data:image\/(?:jpeg|png);base64,/.test(image) && image.length <= 12_000_000 ? { image, at: now, clues: clues.map(clue => ({ ...clue, description: clueDescriptions[clue.category] })) } : null;
       const decision = decideExposure(this.exposure, scoreFindability(clues, this.frames, now), this.thresholds);
       this.exposure = decision.state;
       this.frames = [...this.frames.filter((frame) => now - frame.at <= 120_000), { at: now, clues }];
@@ -38,7 +43,7 @@ export class OffTheMap {
         try {
           if (action === 'privacy') {
             const pending = this.dependencies.privacy(); this.privacyPending = pending;
-            try { await pending; this.privacyActive = true; this.actionStatus = 'privacy applied'; }
+            try { await pending; this.privacyActive = true; this.actionStatus = 'privacy applied'; this.presentationEvents = [...this.presentationEvents, { at: now, label: 'Privacy', kind: 'privacy' as const }].slice(-120); }
             finally { if (this.privacyPending === pending) this.privacyPending = null; }
           }
           if (action === 'marker') {
@@ -54,7 +59,7 @@ export class OffTheMap {
       }
     } finally { this.busy = false; }
   }
-  invalidateAnalysis(): void { this.revision++; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; }
+  invalidateAnalysis(): void { this.lastPreview = null; this.revision++; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; }
   async dismiss(): Promise<void> {
     if (this.dismissing) throw new Error('Restore already in progress');
     this.dismissing = true;
@@ -67,7 +72,7 @@ export class OffTheMap {
     } finally { this.dismissing = false; }
   }
   snapshot() {
-    return structuredClone({ simulated: false as const, analysis: this.exposure.analysis, exposure: this.exposure, privacyActive: this.privacyActive, actionStatus: this.actionStatus, markerStatus: this.markerStatus, markerHttpStatus: this.markerHttpStatus, lastMarker: this.lastMarker, timeline: this.timeline,
+    return structuredClone({ presentationEvents: this.presentationEvents, simulated: false as const, analysis: this.exposure.analysis, exposure: this.exposure, privacyActive: this.privacyActive, actionStatus: this.actionStatus, markerStatus: this.markerStatus, markerHttpStatus: this.markerHttpStatus, lastMarker: this.lastMarker, timeline: this.timeline,
       clues: (this.frames.at(-1)?.clues ?? []).map((clue) => ({ ...clue, description: clueDescriptions[clue.category] })),
     });
   }

@@ -15,6 +15,22 @@ export class TwitchRuntime {
   private chats: ChatActivity[] = [];
   private names = new Map<string, string>();
   displayName(id: string): string { return this.names.get(id) ?? id; }
+  private nameLookups = new Map<string, Promise<string | null>>();
+  private nameRetry = new Map<string, number>();
+  async resolveDisplayName(id: string): Promise<string | null> {
+    if (this.names.has(id)) return this.names.get(id)!;
+    if ((this.nameRetry.get(id) ?? 0) > Date.now()) return null;
+    const pending = this.nameLookups.get(id); if (pending) return pending;
+    const lookup = (async () => {
+      try {
+        const user = (await this.helix.users(id)).data.find(user => user.id === id);
+        if (user?.display_name) { this.names.set(id, user.display_name.slice(0, 100)); return this.names.get(id)!; }
+      } catch { /* No numeric identifier on the public overlay when lookup is unavailable. */ }
+      this.nameRetry.set(id, Date.now() + 30_000); return null;
+    })();
+    this.nameLookups.set(id, lookup);
+    try { return await lookup; } finally { this.nameLookups.delete(id); }
+  }
   private online = false;
   private status = 'authorization required';
   private connected = false;

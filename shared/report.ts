@@ -1,23 +1,26 @@
 import './style.css';
-import type { sessionReport } from '../src/core/session.ts';
+import { drawTelemetry, summarizeTelemetry, elapsedTime, correlationText, TelemetrySelection } from './telemetry.ts';
+import type { TelemetryPoint, TelemetryEvent } from './telemetry.ts';
+document.body.dataset.page = 'report';
 const app = document.getElementById('app')!;
-app.innerHTML = '<header><h1>Spotter · Session report</h1><a href="/dashboard/">Back to dashboard</a><strong id="simulated" class="badge" hidden>SIMULATED</strong></header><article class="card"><h2>Your session, at a glance.</h2><p id="summary">Loading…</p><p id="peak"></p><p id="low"></p><p id="changes"></p><p id="correlation"></p><svg id="curves" viewBox="0 0 600 180" aria-label="Energy and chat curves" role="img"></svg><p class="legend"><span>● Energy</span><span>● Chat, scaled to session peak</span></p><p>Energy is relative to your personal baseline. Correlation describes this session; it does not establish cause.</p></article>';
-const text = (id: string, value: string) => { document.getElementById(id)!.textContent = value; };
-try {
-  const response = await fetch('/api/report');
-  if (!response.ok) throw new Error('Unavailable');
-  const report = await response.json() as ReturnType<typeof sessionReport> & { simulated: boolean };
-  document.getElementById('simulated')!.hidden = !report.simulated;
-  text('summary', report.samples ? `${report.samples} numeric session samples` : 'No calibrated energy samples yet. Enable the sensor and complete calibration first.');
-  text('peak', report.peak ? `Peak energy: ${report.peak.energy}/100` : '');
-  text('low', report.low ? `Lowest energy: ${report.low.energy}/100` : '');
-  text('changes', report.energyChangePercent !== null ? `Energy change: ${report.energyChangePercent.toFixed(0)}% · Chat change: ${report.chatChangePercent?.toFixed(0) ?? '—'}%` : '');
-  text('correlation', report.correlation !== null ? `Energy/chat correlation: ${report.correlation.toFixed(2)}` : 'Not enough variation for a correlation.');
-  const peak = Math.max(1, ...report.curves.map((point) => point.chat));
-  for (const metric of ['energy', 'chat'] as const) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    line.setAttribute('points', report.curves.map((point, index) => `${index / Math.max(1, report.curves.length - 1) * 600},${160 - (metric === 'energy' ? point.energy / 100 : point.chat / peak) * 140}`).join(' '));
-    line.setAttribute('fill', 'none'); line.setAttribute('stroke', metric === 'energy' ? '#b6ef89' : '#adadf4'); line.setAttribute('stroke-width', '3');
-    document.getElementById('curves')!.append(line);
-  }
-} catch { text('summary', 'Report unavailable. Check the local server.'); }
+app.innerHTML = `<header class="report-header"><div><span class="eyebrow">SPOTTER / SESSION DEBRIEF</span><h1>Your second wind.</h1></div><a href="/dashboard/?record=1">Back to dashboard</a><strong id="simulated" class="badge" hidden>SIMULATED</strong></header><section class="report-tools"><label class="telemetry-source">Chart source <select id="take-select"><option value="">Current session</option></select></label><p id="source" class="data-provenance"></p></section><section class="report-metrics" id="metrics"></section><article class="card report-chart"><div class="card-top"><h2>The shape of your session.</h2><span class="mini-tag">ENERGY × COMMUNITY</span></div><svg id="curves" aria-label="Measured energy and chat over elapsed time, with recorded event annotations" role="img"></svg><p class="legend"><span>● Energy / 100</span><span>● Chat / session peak</span><span>Elapsed time · mm:ss</span></p><p id="correlation"></p></article><article class="card report-moments"><span class="eyebrow">MOMENTS THAT MATTER</span><ul id="moments"></ul></article><footer><p id="summary">Loading numeric session data…</p><p>Relative to your baseline. Association is not causation.</p></footer>`;
+let current: { curves: TelemetryPoint[]; presentationEvents: TelemetryEvent[]; simulated: boolean } = { curves: [], presentationEvents: [], simulated: false };
+const selection = new TelemetrySelection(document.getElementById('take-select') as HTMLSelectElement, render);
+function render(): void {
+  const take = selection.selected; const points = take?.points ?? current.curves; const events = take?.events ?? current.presentationEvents;
+  const summary = summarizeTelemetry(points); const sim = take?.simulated ?? current.simulated;
+  document.getElementById('simulated')!.hidden = !sim;
+  document.getElementById('source')!.textContent = selection.provenance(current.simulated);
+  const change = (value: number | null) => value === null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(0)}%`;
+  const metrics = [ ['PEAK ENERGY', summary.peak ? `${summary.peak.energy}` : '—', summary.peak ? elapsedTime(summary.peak.at - summary.start) : 'No samples'], ['LOWEST ENERGY', summary.low ? `${summary.low.energy}` : '—', summary.low ? elapsedTime(summary.low.at - summary.start) : 'No samples'], ['ENERGY CHANGE', change(summary.energyChangePercent), 'First → last measured sample'], ['CHAT CHANGE', change(summary.chatChangePercent), 'Messages/min · no inferred traffic'] ];
+  document.getElementById('metrics')!.replaceChildren(...metrics.map(([label, value, detail]) => { const card = document.createElement('article'); card.className = 'card metric-card'; const title = document.createElement('span'); title.className = 'eyebrow'; title.textContent = label!; const number = document.createElement('b'); number.textContent = value!; const note = document.createElement('p'); note.textContent = detail!; card.append(title, number, note); return card; }));
+  drawTelemetry(document.getElementById('curves') as unknown as SVGSVGElement, points, events);
+  const correlation = correlationText(points); const target = document.getElementById('correlation')!; target.hidden = correlation === null; target.textContent = correlation;
+  const moments = [...events];
+  if (summary.peak) moments.unshift({ at: summary.peak.at, label: 'Peak energy', kind: 'alert' });
+  if (summary.low) moments.push({ at: summary.low.at, label: 'Lowest energy', kind: 'alert' });
+  document.getElementById('moments')!.replaceChildren(...moments.toSorted((a, b) => a.at - b.at).slice(-7).map(event => { const li = document.createElement('li'); const time = document.createElement('b'); time.textContent = elapsedTime(event.at - summary.start); const label = document.createElement('span'); label.textContent = event.label; li.append(time, label); return li; }));
+  document.getElementById('summary')!.textContent = `${points.length} numeric observations · ${summary.n} valid energy/chat pairs · ${elapsedTime(summary.end - summary.start)} measured span`;
+}
+try { const response = await fetch('/api/report'); if (!response.ok) throw new Error('Unavailable'); current = await response.json() as typeof current; current.presentationEvents ??= []; render(); }
+catch { document.getElementById('summary')!.textContent = 'Report unavailable. Check the local server.'; }

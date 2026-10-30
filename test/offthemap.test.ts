@@ -269,3 +269,25 @@ test('dismiss waits for a pending privacy RPC before restoration and cancels its
   finishPrivacy(); await Promise.all([sample, dismiss]);
   assert.equal(restores, 1); assert.equal(markers, 0); assert.equal(module.snapshot().privacyActive, false);
 });
+
+test('private frame preview publishes only a successfully analyzed frame in memory and clears on failure', async () => {
+  let fails = false;
+  const image = 'data:image/jpeg;base64,AA==';
+  const module = new OffTheMap({ capture: async () => image, analyze: async () => { if (fails) throw new Error('Unavailable'); return [{ category: 'transit', severity: 2, confidence: .9 }]; }, privacy: async () => {}, restore: async () => {}, marker: async () => {} });
+  assert.equal(module.preview(), null);
+  await module.sample(1000);
+  assert.equal(module.preview()?.image, image);
+  assert.equal(module.preview()?.at, 1000);
+  assert.ok(module.preview()?.clues.length);
+  assert.ok(!JSON.stringify(module.snapshot()).includes(image));
+  fails = true; await module.sample(2000); assert.equal(module.preview(), null);
+  fails = false; await module.sample(3000); module.invalidateAnalysis(); assert.equal(module.preview(), null);
+});
+
+test('privacy chart annotations reflect a successful scene action, never a failed request', async () => {
+  for (const succeeds of [false, true]) {
+    const module = new OffTheMap({ capture: async () => 'data:image/jpeg;base64,AA==', analyze: async () => [{ category: 'transit', severity: 5, confidence: 1 }, { category: 'storefront', severity: 5, confidence: 1 }], privacy: async () => { if (!succeeds) throw new Error('Unavailable'); }, restore: async () => {}, marker: async () => {} });
+    await module.sample(1000);
+    assert.equal(module.snapshot().presentationEvents.length, succeeds ? 1 : 0);
+  }
+});

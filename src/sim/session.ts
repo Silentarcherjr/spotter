@@ -1,3 +1,4 @@
+import type { TelemetryEvent } from '../presentation/telemetry.ts';
 import { mockVision, mockChatClassifier } from '../ai/mock.ts';
 import { clueDescriptions } from '../ai/vision-contract.ts';
 import { decideExposure, dismissExposure, initialExposure, scoreFindability } from '../core/exposure.ts';
@@ -7,13 +8,14 @@ import { decideModeration } from '../core/moderation.ts';
 import { initialTagOut, transitionTagOut } from '../core/tagout.ts';
 import type { TagOutEvent, TagOutPolicy } from '../core/tagout.ts';
 import type { AudioFeatures, FrameObservation } from '../core/types.ts';
-import { frameSource, voiceFeatures, syntheticChat, simulatedCrew } from './sources.ts';
+import { frameSource, voiceFeatures, syntheticChat, simulatedCrew, demoVoiceFeatures } from './sources.ts';
 import { createSimEvent } from './events.ts';
 import { advanceRally, initialRally } from '../core/session.ts';
 
 export class DemoSession {
   private energyHold: ReturnType<typeof advanceCombinedAlert> | null = null;
   private step = 0;
+  private presentationEvents: TelemetryEvent[] = [];
   private now = 600_000;
   private exposure = initialExposure();
   private tagout = initialTagOut();
@@ -47,10 +49,12 @@ export class DemoSession {
       policy: this.tagoutPolicy, now: this.now, broadcasterId: sourceId, tokenOwnerId: sourceId, sourceLive: true,
       crew: returning ? [{ id: 'main', live: true, energy: 80 }] : [this.crew], recentRaids: this.recentRaids,
     });
+    if (event.type === 'raid_confirmed' && result.state.phase !== this.tagout.phase) this.presentationEvents.push({ at: this.now, label: result.state.phase === 'home' ? 'Home confirmed' : 'Relay confirmed', kind: 'relay' });
     this.tagout = result.state;
     for (const action of result.actions) {
       this.events.push(createSimEvent(true, action.type, { at: this.now }));
       if (action.type === 'start_raid') {
+        this.presentationEvents.push({ at: this.now, label: 'Raid pending', kind: 'relay' });
         this.recentRaids.push(this.now);
         this.tagout = transitionTagOut(this.tagout, { type: 'raid_started' }, { now: this.now, broadcasterId: sourceId, tokenOwnerId: sourceId, sourceLive: true, crew: [this.crew], recentRaids: this.recentRaids }).state;
       }
@@ -65,8 +69,9 @@ export class DemoSession {
     const score = scoreFindability(clues, this.frames, this.now);
     const decision = decideExposure(this.exposure, score);
     this.exposure = decision.state;
+    if (decision.actions.includes('privacy')) this.presentationEvents.push({ at: this.now, label: 'Privacy', kind: 'privacy' });
     this.frames = [...this.frames.filter((item) => this.now - item.at <= 120_000), { at: this.now, clues }];
-    const audio = voiceFeatures(true, this.now, this.step >= 4);
+    const audio = demoVoiceFeatures(this.now, this.step);
     this.audio = [...this.audio.filter((item) => this.now - item.at <= 45_000), audio];
     this.energy = scoreEnergy(this.audio, this.baseline, this.now);
     const chat = syntheticChat(true, this.step, this.now);
@@ -81,8 +86,10 @@ export class DemoSession {
     this.timeline = [...this.timeline, { at: this.now, score, actions: decision.actions, simulated: true as const }].slice(-120);
     this.curves = [...this.curves, { at: this.now, energy: this.energy ?? 0, chat: chatVelocity(this.chats, this.now).messagesPerMinute }].slice(-120);
     this.moderation = this.moderation.slice(-120);
+    const combinedWasActive = this.energyHold?.active;
     // Each scripted tick represents thirty seconds of continuous simulated input.
     for (let at = this.now - 29_000; at <= this.now; at += 1000) this.energyHold = advanceCombinedAlert(this.energyHold, { now: at, energy: this.energy, exposure: this.exposure.score, available: this.exposure.analysis === 'available', threshold: this.energyThreshold });
+    if (this.energyHold?.active && !combinedWasActive) this.presentationEvents.push({ at: this.now, label: 'Combined alert', kind: 'alert' });
     this.step++;
   }
   request(): void { this.raid({ type: 'request' }); }
@@ -95,7 +102,7 @@ export class DemoSession {
   dismiss(): void { this.exposure = dismissExposure(this.exposure); }
   snapshot() {
     return structuredClone({
-      simulated: true as const, at: this.now, step: this.step, analysis: this.exposure.analysis,
+      presentationEvents: this.presentationEvents, simulated: true as const, at: this.now, step: this.step, analysis: this.exposure.analysis,
       exposure: this.exposure, energy: this.energy, calibration: 1,
       clues: (this.frames.at(-1)?.clues ?? []).map((clue) => ({ ...clue, description: clueDescriptions[clue.category] })),
       chat: chatVelocity(this.chats, this.now), correlation: correlation(this.curves),

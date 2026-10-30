@@ -15,3 +15,10 @@ export function syntheticChat(enabled: boolean, step: number, at: number) {
 export function simulatedCrew(enabled: boolean) {
   return createSimEvent(enabled, 'crew', { id: 'crew-partner', live: true, energy: 91 });
 }
+
+// Scripted input only: moderate, irregular decline into the measured44-ish range.
+export function demoVoiceFeatures(at: number, step: number) {
+  const levels = [0, .04, -.03, .02, .3, .5, .7, .9, 1, 1.01, 1.025, 1.01];
+  const f = levels[step] ?? [1.015, 1.025, 1.01, 1.02][step % 4]!;
+  return createSimEvent(true, 'audio_features', { at, rms: .2 - .04 * f, pitchMedian: 150 - 18 * f, pitchRange: 50 - 14 * f, spectralSlope: -2 - .8 * f, voicedRatio: .7 - .12 * f, pauseLength: .2 + .16 * f, speechRate: 3 - .8 * f });
+}

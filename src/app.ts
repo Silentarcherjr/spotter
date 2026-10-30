@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import { loadRecordedTakes } from './presentation/takes.ts';
+import type { TelemetryEvent } from './presentation/telemetry.ts';
 import websocket from '@fastify/websocket';
 import { DatabaseSync } from 'node:sqlite';
 import { DemoSession } from './sim/session.ts';
@@ -21,7 +23,7 @@ import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
@@ -54,6 +56,10 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
       socket.on('close', () => { if (sensorSocket === socket) { sensorSocket = null; energyHold = null; } });
     });
   });
+  const presentationEvents: TelemetryEvent[] = [];
+  let combinedWasActive = false;
+  const takes = loadRecordedTakes('data/takes');
+  let demoPaused = false;
   let demo = options.simulated ? new DemoSession(true, energyAlertThreshold, tagoutPolicy) : null;
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
   const obs = !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
@@ -76,7 +82,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     start: (from, to) => twitch.helix.startRaid(from, to), cancel: (id) => twitch.helix.cancelRaid(id),
     knownIds: (options.crew ?? []).map((peer) => peer.id),
   }, tagoutPolicy) : null;
-  twitch?.setRaidHandler((from, to, at) => tagout?.confirm(from, to, at));
+  twitch?.setRaidHandler((from, to, at) => { const previous = tagout?.snapshot(at).tagout.phase; tagout?.confirm(from, to, at); const phase = tagout?.snapshot(at).tagout.phase; if (phase !== previous && (phase === 'covered' || phase === 'home')) presentationEvents.push({ at, label: phase === 'home' ? 'Home confirmed' : 'Relay confirmed', kind: 'relay' }); });
   let closing = false;
   let crewBusy = false;
   let crewTimer: ReturnType<typeof setInterval> | undefined;
@@ -95,9 +101,9 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     if (obs) void obs.start();
     if (tagout) { void updateCrew(); crewTimer = setInterval(() => { void updateCrew(); }, 5_000); crewTimer.unref(); }
     if (offthemap) { visionTimer = setInterval(() => { void offthemap.sample(Date.now()); }, 4_000); visionTimer.unref(); }
-    if (demo) { frames = await loadFrameFolder(true, options.frameDirectory ?? fileURLToPath(new URL('../test/fixtures/frames', import.meta.url))); demo.tick(); timer = setInterval(() => demo?.tick(), 4_000); timer.unref(); }
+    if (demo) { frames = await loadFrameFolder(true, options.frameDirectory ?? fileURLToPath(new URL('../test/fixtures/frames', import.meta.url))); demo.tick(); timer = setInterval(() => { if (!demoPaused) demo?.tick(); }, 4_000); timer.unref(); }
   });
-  app.addHook('onClose', async () => { closing = true; clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
+  app.addHook('onClose', async () => { closing = true; offthemap?.invalidateAnalysis(); clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     let hostname = '';
@@ -108,11 +114,14 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
       if (!allowed.includes(request.headers.origin)) return reply.code(403).send({ error: 'Invalid origin' });
     }
   });
+  app.get('/api/review/takes', async () => (await takes).map(({ id, label, simulated, points }) => ({ id, label, simulated, samples: points.length })));
+  app.get<{ Params: { id: string } }>('/api/review/takes/:id', async (request, reply) => { const take = (await takes).find(take => take.id === request.params.id); return take ?? reply.code(404).send({ error: 'Take unavailable' }); });
+  app.get('/api/private/frame', async (request, reply) => { if (request.headers['x-spotter-preview'] !== 'private-dashboard') return reply.code(403).send({ error: 'Private dashboard only' }); return offthemap?.preview() ?? null; });
   app.get('/api/overlay', async () => {
     if (!hudEnabled) return { simulated: options.simulated || secondwind?.snapshot(Date.now()).audioSimulated === true, enabled: false };
-    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, returning: demo.snapshot().tagout.returning, rally: demo.snapshot().rally, coveringFor: demo.snapshot().tagout.phase === 'covered' ? 'Main streamer' : null };
+    if (demo) return { simulated: true, enabled: true, energy: demo.snapshot().energy, phase: demo.snapshot().tagout.phase, returning: demo.snapshot().tagout.returning, rally: demo.snapshot().rally, coveringFor: demo.snapshot().tagout.phase === 'covered' ? options.demoDisplayName?.trim().slice(0, 100) || 'Demo host' : null };
     const energy = secondwind!.snapshot(Date.now());
-    return { simulated: energy.audioSimulated, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', returning: tagout?.snapshot(Date.now()).tagout.returning ?? false, coveringFor: tagout?.snapshot(Date.now()).coveringFor ? twitch?.displayName(tagout.snapshot(Date.now()).coveringFor!) : null };
+    return { simulated: energy.audioSimulated, enabled: true, energy: energy.energy, rally: energy.rally, phase: tagout?.snapshot(Date.now()).tagout.phase ?? 'idle', returning: tagout?.snapshot(Date.now()).tagout.returning ?? false, coveringFor: tagout?.snapshot(Date.now()).coveringFor ? await twitch?.resolveDisplayName(tagout.snapshot(Date.now()).coveringFor!) ?? 'Crew streamer' : null };
   });
   app.get('/api/crew/status', async (request, reply) => {
     if (!options.crewToken || request.headers.authorization !== `Bearer ${options.crewToken}` || !secondwind) return reply.code(401).send({ error: 'Crew authorization required' });
@@ -125,11 +134,13 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     });
   }
   app.post('/api/calibration/reset', async () => { energyHold = null; secondwind?.resetCalibration(); return { reset: true }; });
-  app.get('/api/report', async () => ({ simulated: options.simulated || secondwind?.snapshot(Date.now()).audioSimulated === true, ...(demo ? sessionReport(demo.snapshot().curves) : secondwind!.report()) }));
+  app.get('/api/report', async () => ({ presentationEvents: demo?.snapshot().presentationEvents ?? [...presentationEvents, ...(offthemap?.snapshot().presentationEvents ?? [])], simulated: options.simulated || secondwind?.snapshot(Date.now()).audioSimulated === true, ...(demo ? sessionReport(demo.snapshot().curves) : secondwind!.report()) }));
   app.post<{ Body: { enabled: boolean } }>('/api/hud', {
     schema: { body: { type: 'object', additionalProperties: false, required: ['enabled'], properties: { enabled: { type: 'boolean' } } } },
   }, async (request) => { hudEnabled = request.body.enabled; return { enabled: hudEnabled }; });
   if (demo) {
+    app.post<{ Body: { paused: boolean } }>('/api/demo/playback', { schema: { body: { type: 'object', required: ['paused'], additionalProperties: false, properties: { paused: { type: 'boolean' } } } } }, async (request) => { demoPaused = request.body.paused; return { paused: demoPaused }; });
+    app.post('/api/demo/step', async (_request, reply) => { if (!demoPaused) return reply.code(409).send({ error: 'Pause demo playback first' }); demo!.tick(); return demo!.snapshot(); });
     app.get('/api/demo/frame', async () => frames[(demo!.snapshot().step - 1) % frames.length]);
     app.post('/api/demo/reset', async () => { demo = new DemoSession(true, energyAlertThreshold, tagoutPolicy); demo.tick(); return demo.snapshot(); });
     for (const action of ['request', 'approve', 'cancel', 'requestBack', 'dismiss'] as const) {
@@ -177,7 +188,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   });
   app.post('/api/twitch/disconnect', async () => { twitch?.disconnect(); return { connected: false }; });
   app.get('/api/health', async () => ({ status: 'ok', simulated: options.simulated }));
-  app.get('/api/status', async () => demo ? { ...demo.snapshot(), hudEnabled } : ({
+  app.get('/api/status', async () => { if (demo) return { ...demo.snapshot(), hudEnabled }; const state = ({
     hudEnabled,
     analysis: 'analysis unavailable',
     exposure: { score: 0, active: false, dismissed: false, analysis: 'analysis unavailable' },
@@ -192,6 +203,11 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     connected: { twitch: twitch?.snapshot().connected ?? false, obs: obs?.connected ?? false, ai: offthemap?.snapshot().analysis === 'available' },
     twitch: twitch?.snapshot() ?? { configured: false, connected: false, status: 'not configured' },
     chat: twitch?.snapshot().chat ?? { messagesPerMinute: 0, uniqueChattersPerMinute: 0 },
-  }));
+  });
+    if (state.combinedAlert && !combinedWasActive) presentationEvents.push({ at: Date.now(), label: 'Combined alert', kind: 'alert' });
+    combinedWasActive = state.combinedAlert;
+    if (presentationEvents.length > 120) presentationEvents.splice(0, presentationEvents.length - 120);
+    return { ...state, presentationEvents: [...presentationEvents, ...(offthemap?.snapshot().presentationEvents ?? [])] };
+  });
   return app;
 }

@@ -205,7 +205,7 @@ Copy [the crew example](docs/crew.example.json) to ignored `data/crew.json`, fil
 
 `TAGOUT_ENERGY_THRESHOLD=45` and `TAGOUT_SUSTAIN_S=60` configure the automatic suggestion: available energy must stay **strictly below45 for60s** by default. The partner must still be live with energy≥60. These are personal heuristics, not clinical thresholds: the prior file baseline had a theoretical floor around42 (the original tired endings actually measured55–56), making the old30 rule unreachable for that profile. The processed SIMULATED demo now measures44. No energy score or calibration formula changed.
 
-**Pedir relevo** requests a suggestion manually without waiting for personal low energy; it never starts a raid. Both live-channel/partner requirements still apply, and the separate approval button remains mandatory. A pending/persisted raid cannot be replaced by a new manual request.
+**Request tag out** requests a suggestion manually without waiting for personal low energy; it never starts a raid. Both live-channel/partner requirements still apply, and the separate approval button remains mandatory. A pending/persisted raid cannot be replaced by a new manual request.
 
 For two local accounts, register both OAuth redirects (3210/3220), then run `npm run crew:dev -- primary` and `npm run crew:dev -- secondary` in separate terminals, instead of an already-running dev process on those ports. The launcher creates private600-mode files under ignored `data/crew/`, uses API3210/Vite5173 for the principal and API3220/Vite5174/secondary.sqlite for the companion, and disables OBS/AI in the companion server. It inherits the Twitch app credentials internally without printing/copying them into crew JSON. Authorize a different account per instance, run `npm run crew:link`, and restart both to load reciprocal peer identities. Duplicate account IDs are rejected. Vite denies all HTTP access to data/, including /@fs paths; the sensor reads selected files locally. `/dashboard/crew.html` provides two visible sensor panes; normal separate sensor tabs are also available.
 
@@ -252,7 +252,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**107 automated tests (107 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**117 automated tests (117 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -266,3 +266,15 @@ Tests use `node:test`/`node:assert` and fixtures under `test/fixtures/`. Startup
 Codex read [BRIEF.md](BRIEF.md), followed [AGENTS.md](AGENTS.md), wrote core tests before changing logic, turned observed failures into regressions, and committed/pushed each implementation phase. See the dated [work log](docs/codex-log.md), [session ID](docs/CODEX_SESSION.md), [plan](PLAN.md) and [remaining human checklist](docs/LIVE_CHECKLIST.md).
 
 References: [Twitch OAuth](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/), [EventSub](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/), [Helix](https://dev.twitch.tv/docs/api/reference/), [Responses Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses), [image input](https://developers.openai.com/api/docs/guides/images-vision), [OBS client](https://github.com/obs-websocket-community-projects/obs-websocket-js), [pitchy](https://github.com/ianprime0509/pitchy).
+
+### Recording view and measured session evidence
+
+Open `/dashboard/?record=1` for a1920×1080 recording layout: reduced header and all six cards, including both alerts, fit within1080px. Dashboard text and SVG axis/event labels are at least14px. `Request tag out` still only suggests; the raid requires its separate approval.
+
+Dashboard/report charts default to an available recorded numeric take from ignored `data/takes/`; use **Chart source** to switch to the current session or another recording. The startup catalog includes the measured processed-file energy take, measured combined-alert take and real two-way Twitch relay. Each recording is separately labelled; simulated audio stays marked SIMULATED even when Twitch was real. We do not merge sessions, interpolate missing samples, infer chat traffic or claim privacy merely because exposure crossed80. The relay capture did not record chat and is labelled accordingly. A new recording becomes available after server startup/catalog loading.
+
+Curves use elapsed time, actual sample spacing and event annotations. Correlation is hidden below20 valid energy/chat pairs and when either series lacks variation; otherwise it shows two decimals and n. The report uses measured peak/minimum, first-to-last percentage changes, paired count and timed key moments. Zero starting chat gives an unavailable percentage, not an invented decline.
+
+In real mode the private Frame Monitor shows only the last successfully analyzed OBS frame, with generic clue chips. It is held in memory, never put into the status/report/overlay payload, never written to disk and served with no-store through a private-dashboard header. Failure/disconnection clears the preview; SIM alone uses the illustrative fixture. Public overlay names come from EventSub display names, with a cached Helix lookup after restart; lookup failure never prints a numeric ID.
+
+The revised demo changes **synthetic inputs only**: irregular energy≈75→43–44 and high exposure≈80–86, with the same core scores, calibration, thresholds and approval rules. Optional `SIM_DISPLAY_NAME` sets its clearly simulated public host label. Demo-only `/api/demo/playback` and `/api/demo/step` pause/advance virtual playback for reproducible captures; they do not exist in real mode. All ten final design PNGs are local/ignored in `data/screens/`; earlier screenshots are preserved in `data/screens-before-final-pass/`. These are design captures, not additional live-service proof.

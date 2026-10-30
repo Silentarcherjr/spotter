@@ -42,6 +42,13 @@ Offline implementation does not establish the real-service definition of done. D
 - [x] Replacement companion elsilentarcher authorized on3220; public account creation2020-02-19 and six scopes verified. Reciprocal crew linked to493713410. Both previous unfinished cycles archived while offline through the tested retirement path; idle is not home confirmation. Existing secondary OBS credentials changed privately by the user. New live return completed below.
 - [x] New complete real cycle with elsilentarcher (account created2020): automatic suggestion at primary44/partner≈71–83, click-approved outbound, native Twitch countdown with2raiders, actual EventSub covered on both and receiver OBS Covering for. Requested/approved tag back from the companion dashboard; Twitch native countdown again showed2raiders, chat redirected home and both instances reached HOME through actual matching EventSub. Final countdowns null, no pending raid. Primary stayed<45 for at least345.668s in this capture. Alredio served as spectator. Private screenshots, three segmented dashboard videos and allowlisted receipts in data/takes/tagout-resume-2026-10-29/. The previous failed return with the young alredio account remains historical evidence, not the final outcome.
 
+## Final recording design
+
+- [x]1920×1080 recording layout (?record=1) verified with all six cards and both alerts, no page/card clipping, and no visible dashboard text below14px. Ten fresh design PNGs remain ignored in data/screens/.
+- [x] Separately labelled measured takes available in dashboard/report, actual time axes and observed-event annotations; correlation hidden below20 valid pairs or without variance, otherwise two decimals/n. No chat inferred for the relay recording.
+- [x] Real private Frame Monitor memory endpoint checked against actual OBS/vision using metadata only; no analyzed frame saved. Mocked adapter regression verifies successful frame delivery, public-payload exclusion and clearing on disconnect. No live screenshot of the analyzed frame was taken.
+- [x] Production src/core/ scoring/calibration/thresholds unchanged. Only simulated input script and presentation changed;117 automated tests pass. Display name resolution and successful-only privacy annotations covered.
+
 ## Submission — user action
 
 - [ ] Record/edit a video of at most 3:00 with no copyrighted music. Keep SIMULATED visible on all mock scenes.

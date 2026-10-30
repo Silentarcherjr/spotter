@@ -57,3 +57,97 @@ footer { display: flex; gap: 20px; justify-content: space-between; align-items: 
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; } }
 
 svg#curves { display: block; width: 100%; height: auto; }
+
+/* YouTube capture legibility: dashboard text never falls below14px. */
+body[data-page="dashboard"] :is(p,button,li,label,input,select,nav,a:not(.wordmark),small,.badge,.eyebrow,.mini-tag,.private-pill,.muted,.connection,.dial-label>span,.stamina-readout small,.rally-header,.rally-header b,.relay-channel,.relay-channel span,.approval-note,.legend,.chips-title,.clue-chips span,.clue-chips b,.clue-chips i,.privacy-state,.data-provenance) { font-size: 14px; }
+body[data-page="dashboard"] .eyebrow,body[data-page="dashboard"] .mini-tag { letter-spacing: .07em; color: #c0cde3; }
+body[data-page="dashboard"] .muted { color: #bdc9df; }
+body[data-page="dashboard"] .clue-chips li { padding: 8px 10px; background: #233047; border-color: #8099c580; color: #f2f6ff; }
+body[data-page="dashboard"] .clue-chips b { color: #ffe0a3; }
+.telemetry-source { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #e1e9f8; }
+.telemetry-source select { min-width: 0; max-width: 100%; flex: 1; background: #131c2c; color: #f2f6ff; border: 1px solid #8497b96b; border-radius: 5px; padding: 7px; font: 14px system-ui; }
+.data-provenance { font-size: 14px; color: #c5b4ff; line-height: 1.4; margin: 8px 0; }
+.chart-card svg { width: 100%; height: 230px; display: block; }
+.chart-card h2 { margin: 8px 0; }
+.scene-window { position: relative; }
+.frame-clues { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.frame-clues li { background: #101827ed; color: #fff0d3; border: 1px solid #ffd27c80; border-radius: 5px; padding: 6px 9px; font-size: 14px; }
+#frame-empty { position: absolute; inset: 0; display: grid; place-items: center; background: #111b2a; color: #c8d4e9; font-size: 16px; }
+.scene-card[data-live="true"] .scene-shield { display: none; }
+body.recording main { height: 100dvh; max-width: 1920px; padding: 14px 24px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+body.recording .masthead { flex: none; height: 50px; padding-bottom: 8px; }
+body.recording .intro { margin: 0; min-height: 48px; flex: none; }
+body.recording .intro h1 { font-size: 34px; margin: 0; }
+body.recording .intro .eyebrow,body.recording .intro p { display: none; }
+body.recording .demo-controls { display: inline-flex; margin: 0 0 0 12px; }
+body.recording .session-meta { display: flex; align-items: center; }
+body.recording .alert { margin: 0; padding: 8px 14px; flex: none; min-height: 38px; font-size: 14px; }
+body.recording .grid { flex: 1.2; min-height: 415px; }
+body.recording .lower { flex: .9; min-height: 295px; margin: 0; }
+body.recording .card { padding: 14px 16px; }
+body.recording h2 { font-size: 24px; margin: 8px 0 10px; }
+body.recording .exposure-instrument { gap: 14px; min-height: 182px; }
+body.recording .exposure-dial { width: 180px; height: 180px; flex: 0 0 180px; }
+body.recording .dial-label b { font-size: 64px; }
+body.recording .exposure-copy { flex: 1; }
+body.recording .exposure-copy p { margin: 8px 0; }
+body.recording .chips-title { margin: 6px 0; }
+body.recording .clue-chips { margin: 5px 0 8px; gap: 6px; }
+body.recording .clue-chips li { padding: 6px 8px; }
+body.recording .stamina-readout { height: 100px; }
+body.recording .stamina-readout>b { font-size: 76px; }
+body.recording .relay-track { height: 105px; margin: 6px 0; }
+body.recording .relay-phase { margin: 8px 0; }
+body.recording h3 { margin: 8px 0; font-size: 20px; }
+body.recording .approval-note { margin: 10px 0 0; }
+body.recording .lower .card { display: flex; flex-direction: column; }
+body.recording .chart-card h2 { display: none; }
+body.recording .chart-card svg { flex: 1; min-height: 175px; height: 175px; }
+body.recording .chart-card .data-provenance { margin: 5px 0; }
+body.recording .chart-card .telemetry-source { margin-top: 6px; }
+body.recording .scene-window { flex: 1; min-height: 160px; margin-top: 10px; height: auto; }
+body.recording .scene-window img { width: 100%; height: 100%; object-fit: cover; }
+body.recording #frame-caption { margin: 6px 0 0; }
+body.recording .legend { margin: 4px 0; }
+body.recording #timeline { margin: 6px 0; padding-left: 22px; }
+body.recording #timeline li { padding: 5px 0; }
+body.recording footer { flex: none; margin: 0; padding: 5px 0 0; }
+body.recording footer p { margin: 0; font-size: 14px; }
+body.recording #terms-panel { display: none; }
+body[data-page="report"] { font-size: 16px; }
+body[data-page="report"] main { max-width: 1840px; padding: 24px 36px; }
+body[data-page="report"] :is(p,li,a,.eyebrow,.badge,.mini-tag) { font-size: 14px; }
+.report-header { justify-content: space-between; padding-bottom: 14px; }
+.report-header h1 { font-size: 44px; }
+.report-header .badge { margin-left: 0; }
+.report-tools { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin: 14px 0; }
+.report-tools label { min-width: 500px; }
+.report-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 14px; }
+.metric-card { padding: 16px 20px; }
+.metric-card>b { display: block; color: #c5ff6b; font-size: 48px; line-height: 1.2; margin: 6px 0; }
+.metric-card p { margin: 0; }
+.report-chart { padding: 16px 22px; }
+.report-chart h2 { margin: 0; }
+.report-chart svg { width: 100%; height: 330px; display: block; }
+.report-moments { margin-top: 14px; padding: 14px 22px; }
+.report-moments ul { display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 0; list-style: none; margin: 10px 0 0; }
+.report-moments li { display: flex; gap: 10px; color: #dce5f5; }
+.report-moments b { color: #c5b4ff; }
+body[data-page="report"] footer { padding-top: 8px; margin-top: 8px; }
+@media(max-width:1000px) { body.recording main { height: auto; overflow: visible; }body.recording .grid,body.recording .lower { flex: auto; } .report-tools { flex-direction: column; align-items: stretch; }.report-tools label { min-width: 0; }.report-metrics { grid-template-columns: repeat(2,1fr); } }
+body[data-page="dashboard"] :is(.dot,.alert b,.scene-shield b,footer p span) { font-size: 14px; }
+body[data-page="dashboard"] #moderation { font-size: 14px; }
+body.recording .exposure-instrument { min-height: 160px; }
+body.recording .exposure-dial { width: 160px; height: 160px; flex-basis: 160px; }
+body.recording .dial-label b { font-size: 58px; }
+body.recording .chips-title { margin: 4px 0; }
+body.recording .clue-chips li { padding: 4px 8px; }
+body.recording .chart-card svg { margin-top: 0; }
+body.recording .chart-card .legend { margin: 0; }
+body.recording .clue-chips { margin-bottom: 6px; }
+body[data-page="dashboard"] svg#curves { height: 230px; max-height: none; }
+body.recording svg#curves { height: 175px; max-height: none; }
+body[data-page="report"] svg#curves { height: 360px; max-height: none; }
+/* Recording keeps setup controls out of the shot; full controls remain in the normal view. */
+body.recording #recalibrate { display: none; }
+body.recording .clue-chips { max-height: 80px; overflow-y: auto; }
