@@ -69,7 +69,7 @@ test('Chat Guard never deletes on classifier failure and audits approved deletio
   const db = new DatabaseSync(':memory:');
   let unavailable = true;
   const removed: string[] = [];
-  const guard = new ChatGuard(db, { classify: async () => { if (unavailable) throw new Error('unavailable'); return { guessing: true, confidence: .95 }; }, remove: async (id) => { removed.push(id); }, notify: async () => {} });
+  const guard = new ChatGuard(db, { classify: async () => { if (unavailable) throw new Error('unavailable'); return { guessing: true, confidence: .95 }; }, remove: async (id) => { removed.push(id); }, notify: async () => {} }, { autoDelete: true });
   try {
     await guard.check('message-1', 'private fixture content', 0);
     assert.equal(removed.length, 0);

@@ -9,3 +9,8 @@ export const parseEnergyAlertThreshold = (value?: string | number): number => in
 export const parseTagOutEnergyThreshold = (value?: string | number): number => integerSetting(value, 45, 1, 100, 'TAGOUT_ENERGY_THRESHOLD');
 export const parseTagOutSustainS = (value?: string | number): number => integerSetting(value, 60, 1, 3600, 'TAGOUT_SUSTAIN_S');
 export const parseVisionCaptureIntervalMs = (value?: string | number): number => integerSetting(value, 4000, 1000, 60000, 'VISION_CAPTURE_INTERVAL_MS');
+export function parseChatAutoDelete(value?: string): boolean {
+  if (value === undefined || value === '' || value === '0') return false;
+  if (value === '1') return true;
+  throw new Error('CHAT_AUTO_DELETE must be 0 or 1');
+}

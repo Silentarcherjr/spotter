@@ -13,7 +13,7 @@ test('demo combines exposure, low energy, moderation and click-approved raids wi
   assert.equal(snapshot.exposure.active, true);
   assert.equal(snapshot.combinedAlert, true);
   assert.equal(snapshot.tagout.phase, 'suggested');
-  assert.ok(snapshot.moderation.some((event) => event.action === 'delete' && event.simulated));
+  assert.ok(snapshot.moderation.some((event) => event.action === 'flag' && event.simulated));
   assert.ok(snapshot.timeline.some((event) => event.actions.includes('privacy') && event.simulated));
   assert.ok(snapshot.events.every((event) => event.simulated));
   demo.approve();

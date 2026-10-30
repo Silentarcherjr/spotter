@@ -24,7 +24,7 @@ import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; visionCaptureIntervalMs?: number; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; visionCaptureIntervalMs?: number; chatAutoDelete?: boolean; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
   const visionCaptureIntervalMs = parseVisionCaptureIntervalMs(options.visionCaptureIntervalMs);
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
@@ -75,7 +75,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
     const user = twitch.auth.identity?.userId;
     if (!user) throw new Error('Twitch authorization required');
     return twitch.helix.deleteMessage(user, user, id);
-  }, notify: async (_id) => { /* Audit is the private mod notice, exposed on the dashboard. */ } }) : null;
+  }, notify: async (_id) => { /* The private dashboard displays the persisted audit as the mod notice. */ } }, { autoDelete: options.chatAutoDelete === true }) : null;
   if (secondwind) twitch?.setActivityHandler((id, at, userId) => secondwind.chat(id, at, userId));
   if (guard) twitch?.setChatHandler((id, message, at) => guard.check(id, message, at));
   const tagout = twitch ? new TagOut(database, {

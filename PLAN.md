@@ -50,7 +50,7 @@ In `src/core/`, tests before code:
 - Vision call (Responses API, structured output, clue categories only), fail-soft.
 - Dashboard: findability meter, clue list, alert banner, dismiss button, exposure replay timeline.
 - Actions decided in core: warn, privacy scene / blur, stream marker.
-- Chat Guard: private sensitive terms → Helix Blocked Terms; classifier for paraphrased guesses → delete + mod notice + log.
+- Chat Guard: private sensitive terms → Helix Blocked Terms; classifier for paraphrased guesses → private mod notice + log by default; automatic deletion is opt-in.
 - **[HUMAN]** recorded real take: meter climbs, scene blurs, a guessing message is removed on the test channel.
 
 ## Phase 5: Second Wind
@@ -86,7 +86,7 @@ In `src/core/`, tests before code:
 
 | Time | Scene |
 |---|---|
-| 0:00–0:15 | Cold open: "Every Twitch tool watches the chat. Spotter watches the streamer." |
+| 0:00–0:15 | Cold open: "Most Twitch tools watch the chat. Spotter watches the streamer." |
 | 0:15–1:20 | **Off the Map**: IRL walk, meter 12 → 87, clues listed, auto-blur, planted chat guess vanishes, replay. "It never tells anyone where you are." |
 | 1:20–2:00 | **Second Wind**: energy bar drains as the voice flattens; "energy −30%, chat −40%"; rally; combined alert "tired and exposed". |
 | 2:00–2:25 | **Tag Out**: suggestion → click → raid to the high-energy partner → "covering for" overlay → tag back. |

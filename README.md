@@ -1,6 +1,8 @@
 # Spotter
 
-**Every Twitch tool watches the chat. Spotter watches the streamer.**
+**Most Twitch tools watch the chat. Spotter watches the streamer.**
+
+A safety net, not a guarantee.
 
 A local companion with three modules: Off the Map (identifying-clue exposure), Second Wind (personal voice energy) and Tag Out (click-approved crew raids). Observations from the model, decisions from tested code.
 
@@ -42,7 +44,7 @@ Both servers bind to `127.0.0.1`. Keep this tool local. Vite updates frontend fi
 npm run demo
 ```
 
-No `.env` or credentials are needed. `SIM=1` disables all live integrations and microphone activation. The accelerated story shows generic clues accumulating, a reversible privacy blur, declining energy and chat activity, an audited simulated deletion, a partner suggestion and a relay. Click **Approve simulated raid**, then **Request tag back** and the partner's separate approval. **Replay simulated session** restarts the story. Every simulated view/source displays `SIMULATED`.
+No `.env` or credentials are needed. `SIM=1` disables all live integrations and microphone activation. The accelerated story shows generic clues accumulating, a reversible privacy blur, declining energy and chat activity, an audited simulated mod-review flag, a partner suggestion and a relay. Click **Approve simulated raid**, then **Request tag back** and the partner's separate approval. **Replay simulated session** restarts the story. Every simulated view/source displays `SIMULATED`.
 
 The default image is our synthetic SVG fixture. Mock clues follow the deterministic script; no model interprets those pixels. The initial chat window is warmed up so the report correctly compares 20 → 12 messages/min (−40%). Set `SIM_FRAME_DIR` to owned JPEG/PNG/SVG fixtures to replace the illustration: 1–20 images, at most 2 MB each and 20 MB total. Existing fixtures are read into memory; captured/model frames are never written to disk. Real IRL and voice media are pending.
 
@@ -102,6 +104,8 @@ Offline fixtures are synthetic shapes based on official docs, **not CLI captures
 
 ## AI endpoint: direct OpenAI or OpenRouter
 
+Current configured model: **`openai/gpt-4.1-mini`, served via OpenRouter using the same Responses API contract**. `AI_BASE_URL=https://openrouter.ai/api/v1` selects OpenRouter; `AI_BASE_URL=https://api.openai.com/v1` selects OpenAI direct with native model ID `gpt-4.1-mini`. Model IDs remain configuration, not hard-coded runtime choices.
+
 `AI_BASE_URL` defaults to `https://api.openai.com/v1`. The client appends `/responses`, accepting a trailing slash. This configuration applies to both the live server and `npm run calibrate`, and to vision and chat classification. Existing OpenAI setups work without setting this variable.
 
 For OpenRouter, configure `.env` as follows:
@@ -115,7 +119,7 @@ OPENAI_VISION_DETAIL=high
 
 `proveedor/modelo` is a placeholder for the exact OpenRouter model ID: a provider/author prefix, slash, then model name (for example the shape `openai/<model-id>`). Choose a listed model supporting **image input and strict JSON Schema**. Keep using the existing `OPENAI_API_KEY`/`OPENAI_MODEL` variable names; set the key for the selected service. For direct OpenAI, use an OpenAI key and the native model ID without OpenRouter's provider prefix.
 
-Only the exact `openrouter.ai` host receives `provider: { require_parameters: true }`. Requests retain image input, `text.format` with strict `json_schema`, and `store: false`; Spotter never retries by dropping the schema or routing preference. OpenRouter's parameter filter requests compatible routing; model/provider support and schema enforcement can still vary. A rejected schema/unsupported provider is handled as `analysis unavailable`: retain the last exposure score and execute no new automatic action. Runtime observation validation stays enabled. This behavior is covered with mocked requests; a live OpenRouter account has not been exercised.
+Only the exact `openrouter.ai` host receives `provider: { require_parameters: true }`. Requests retain image input, `text.format` with strict `json_schema`, and `store: false`; Spotter never retries by dropping the schema or routing preference. OpenRouter's parameter filter requests compatible routing; model/provider support and schema enforcement can still vary. A rejected schema/unsupported provider is handled as `analysis unavailable`: retain the last exposure score and execute no new automatic action. Runtime observation validation stays enabled. This behavior is covered with mocked requests; real OpenRouter calls have also been exercised in the calibration and evaluations documented below.
 
 See [OpenRouter Responses](https://openrouter.ai/docs/api/reference/responses/overview), [provider routing](https://openrouter.ai/docs/guides/routing/provider-selection) and [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs).
 
@@ -159,7 +163,7 @@ For a controlled connection test, local POST `/api/obs/disconnect` invalidates i
 
 The Responses request sets `store: false`. Images exist only in memory; the overlay receives no exposure/clue data. Provider-side handling follows the selected service/account's data controls: this setting is not a claim of zero provider retention.
 
-Chat Guard runs when Twitch and AI are configured. Pure core logic decides high-confidence guessing-message deletion. The private mod audit records message IDs, timestamps and outcomes before deletion; it never retains message text. Sensitive terms entered in the dashboard go to Twitch blocked terms without local storage. Keep their returned IDs for removal.
+Chat Guard runs when Twitch and AI are configured. Pure core logic flags high-confidence guessing messages for private mod review by default; `CHAT_AUTO_DELETE=1` explicitly opts into deletion. The confidence threshold remains 0.8. The private dashboard provides a visible mod notice and audit of message IDs, timestamps and outcomes; it never retains message text. Sensitive terms entered in the dashboard go to Twitch blocked terms without local storage. Keep their returned IDs for removal.
 
 ## Second Wind
 
@@ -252,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**129 automated tests (129 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**136 automated tests (136 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -309,6 +313,40 @@ Measured 2026-10-30 with `openai/gpt-4.1-mini` via OpenRouter, high detail, 1280
 | Independent-frame exposure ≥80 | 85.7% | 60.0% | 6 / 1 / 4 / 19 |
 | Identifying category micro | 64.3% | 75.0% | 45 / 25 / 15 / 215 |
 | Chat guessing (40 lines) | 100.0% | 100.0% | 20 / 0 / 0 / 20 |
-| Chat guessing with existing confidence ≥0.8 | 100.0% | 100.0% | 20 / 0 / 0 / 20 |
+| Chat high-confidence eligibility ≥0.8 (flag by default) | 100.0% | 100.0% | 20 / 0 / 0 / 20 |
 
 These are a small, balanced, author-labelled development check, not a natural IRL holdout or a safety guarantee. Frame thresholds are tested with empty history, so they do not validate temporal protection. The warning detector missed half the authored risk examples; the action detector missed four and escalated one warning-only scene. Category errors matter even when binary chat accuracy looks perfect. I propose **no threshold change yet**: add independently labelled licensed natural sequences and investigate category/severity misses before testing a lower warning threshold. This set alone cannot identify a defensible replacement for 60/80. Scoring, thresholds and calibration remain unchanged.
+
+## Chat Guard consent and review
+
+By default `CHAT_AUTO_DELETE=0`: a high-confidence whereabouts guess generates an **ID-only private mod-review record and visible notice in Spotter's private dashboard**; the message remains on Twitch. This is a local review surface for the streamer/moderators with access to that dashboard, not an automatic Twitch whisper or a notice posted in public chat. No message text or inferred location is stored. Classification errors therefore do not automatically silence chat. Set `CHAT_AUTO_DELETE=1` explicitly and restart to opt into the existing audited Helix deletion path. Classifier failure still takes no action. This changes the action policy, not the classifier, confidence threshold, exposure score or exposure thresholds. Manually configured Twitch Blocked Terms remain a separate explicit streamer action.
+
+## Licensed footage credits
+
+Downloaded source videos stay local under ignored `data/`; extracted natural evaluation frames are memory-only. All these sources use the [Pexels licence](https://www.pexels.com/license/), which allows free use and modification with restrictions; they are not CC0 or an endorsement by their authors or subjects. Labels concern visible clues, not the people in the videos.
+
+| Use | Clip | Credit |
+|---|---|---|
+| Existing IRL demo, excluded from the new holdout | [Pexels 8275531](https://www.pexels.com/video/people-walking-in-a-busy-street-at-hongdae-8275531/) | 거열 박 / Pexels |
+| Natural holdout and sequence: exterior facade | [Pexels 3647789](https://www.pexels.com/video/pedestrians-passing-by-a-storefront-3647789/) | George Morina / Pexels |
+| Natural holdout and sequence: forest path | [Pexels 5473790](https://www.pexels.com/video/walking-on-a-pathway-5473790/) | Ambient_Nature_ Atmosphere / Pexels |
+| Natural holdout and sequence: commercial street | [Pexels 37063950](https://www.pexels.com/video/busy-urban-street-with-pedestrians-and-shops-37063950/) | Sururi Ballıdağ Director / Pexels |
+
+Reproduction metadata and download URLs are in `test/fixtures/eval-temporal/labels.json`. Verify original clip SHA-256 values against `freeze.json` before evaluation; the runner also checks each extracted frame hash before inference. No natural frame is committed. The optional `scripts/preview-eval.py` authoring tool uses installed Pillow to display a RAM-only contact sheet; it is not a runtime dependency. The three source clips total about259 MB.
+
+## Sequence evaluation and natural holdout
+
+Frozen before inference on 2026-10-30:12 sequences of10 frames, and18 natural standalone frames from the three newly downloaded clips above. Freeze SHA-256: `3d0652debd2c6690aa6db3f8bb0dc2b7843f66cbd3eb564c466c32ad6e72aea5`. Exact labels, source/frame hashes and timestamp membership are tracked; natural frames themselves stay in memory. No model prompt, score or threshold was adjusted after seeing results.
+
+| Evaluation at80 | n | Precision | Recall | TP / FP / FN / TN |
+|---|---:|---:|---:|---|
+| All accumulated sequences | 12 | 100.0% | 66.7% | 4 / 0 / 2 / 6 |
+| Synthetic accumulated sequences | 9 | 100.0% | 60.0% | 3 / 0 / 2 / 4 |
+| Natural accumulated sequences | 3 | 100.0% | 100.0% | 1 / 0 / 0 / 2 |
+| Natural standalone frames | 18 | Undefined: no positive predictions | 0.0% | 0 / 0 / 2 / 16 |
+
+Natural standalone warning at60: precision100%, recall33.3% (TP2/FP0/FN4/TN12). All65 unique images were analyzed successfully. The three natural sequences use2s,4s and1s spacing respectively; the positive short street sequence is the **1s sensitivity case**, not evidence of the same performance at the default4s cadence. Actual scoreFindability history/decay and decideExposure were replayed from a fresh state for each sequence and regression-tested against production OffTheMap. This is offline replay of input timestamps, not a wall-clock throughput benchmark: model latency, busy-sample skips and OBS/player delay are not simulated. Duplicated images reuse the same observation within a run; model nondeterminism is not measured by those repetitions.
+
+The natural sample is a development-unseen, author-labelled holdout, not independently adjudicated and not known to be absent from model training. Natural sequence/standalone subsets overlap and contain only one positive sequence and two positive action frames; synthetic sequences reuse related artwork. Therefore, neither the aggregate100% precision nor the natural100% sequence recall is a validated safety guarantee. See [EVAL.md](docs/EVAL.md) for confusion matrices, peaks, first crossings, failure accounting and limitations. **No threshold change**: first obtain more varied natural sequences at the operating cadence with independent labels.
+
+`npm run eval` runs all sections; `npm run eval -- --temporal` reruns only the sequence/natural extension using the frozen source clips; `npm run eval -- --validate` checks manifests offline. Reruns call the configured provider and can yield different observations. To restore source clips, use the public download URLs in labels.json and the exact filenames `data/eval/natural/pexels-<id>.mp4`; byte hashes are verified before inference. This holdout becomes regression data once inspected and must not be used as evidence for unseen generalization after tuning.

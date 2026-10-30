@@ -1,0 +1,985 @@
+{
+  "labelledBeforeInference": true,
+  "annotation": "Author visual review at 1280 px, no model used to choose labels; generic categories only, no transcription. Risk labels are judgment calls, not verified locations. Sequence gold is cumulative identifying evidence, not OR of standalone numerical scores.",
+  "licence": "https://www.pexels.com/license/",
+  "clips": [
+    {
+      "id": "3647789",
+      "author": "George Morina",
+      "url": "https://www.pexels.com/video/pedestrians-passing-by-a-storefront-3647789/",
+      "download": "https://videos.pexels.com/video-files/3647789/3647789-hd_1920_1080_30fps.mp4"
+    },
+    {
+      "id": "5473790",
+      "author": "Ambient_Nature_ Atmosphere",
+      "url": "https://www.pexels.com/video/walking-on-a-pathway-5473790/",
+      "download": "https://videos.pexels.com/video-files/5473790/5473790-uhd_3840_2160_30fps.mp4"
+    },
+    {
+      "id": "37063950",
+      "author": "Sururi Ballıdağ Director",
+      "url": "https://www.pexels.com/video/busy-urban-street-with-pedestrians-and-shops-37063950/",
+      "download": "https://videos.pexels.com/video-files/37063950/15702000_3840_2160_50fps.mp4"
+    }
+  ],
+  "naturalFrames": [
+    {
+      "id": "n-3647789-00",
+      "clip": "3647789",
+      "seconds": 0,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-04",
+      "clip": "3647789",
+      "seconds": 4,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-08",
+      "clip": "3647789",
+      "seconds": 8,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-12",
+      "clip": "3647789",
+      "seconds": 12,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-16",
+      "clip": "3647789",
+      "seconds": 16,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-20",
+      "clip": "3647789",
+      "seconds": 20,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-5473790-00",
+      "clip": "5473790",
+      "seconds": 0,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-10",
+      "clip": "5473790",
+      "seconds": 10,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-20",
+      "clip": "5473790",
+      "seconds": 20,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-30",
+      "clip": "5473790",
+      "seconds": 30,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-40",
+      "clip": "5473790",
+      "seconds": 40,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-50",
+      "clip": "5473790",
+      "seconds": 50,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-37063950-00",
+      "clip": "37063950",
+      "seconds": 0,
+      "warn": true,
+      "act": true,
+      "categories": [
+        "storefront",
+        "license_plate"
+      ],
+      "rationale": "Readable independent storefront and plate identifiers"
+    },
+    {
+      "id": "n-37063950-02",
+      "clip": "37063950",
+      "seconds": 2,
+      "warn": true,
+      "act": true,
+      "categories": [
+        "storefront",
+        "license_plate"
+      ],
+      "rationale": "Readable independent storefront and plate identifiers"
+    },
+    {
+      "id": "n-37063950-04",
+      "clip": "37063950",
+      "seconds": 4,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    },
+    {
+      "id": "n-37063950-06",
+      "clip": "37063950",
+      "seconds": 6,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    },
+    {
+      "id": "n-37063950-08",
+      "clip": "37063950",
+      "seconds": 8,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    },
+    {
+      "id": "n-37063950-09",
+      "clip": "37063950",
+      "seconds": 9,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    },
+    {
+      "id": "n-3647789-02",
+      "clip": "3647789",
+      "seconds": 2,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-06",
+      "clip": "3647789",
+      "seconds": 6,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-10",
+      "clip": "3647789",
+      "seconds": 10,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-14",
+      "clip": "3647789",
+      "seconds": 14,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-3647789-18",
+      "clip": "3647789",
+      "seconds": 18,
+      "warn": false,
+      "act": false,
+      "categories": [
+        "landmark"
+      ],
+      "rationale": "Distinctive facade without confidently readable independent identifiers"
+    },
+    {
+      "id": "n-5473790-04",
+      "clip": "5473790",
+      "seconds": 4,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-08",
+      "clip": "5473790",
+      "seconds": 8,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-12",
+      "clip": "5473790",
+      "seconds": 12,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-16",
+      "clip": "5473790",
+      "seconds": 16,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-24",
+      "clip": "5473790",
+      "seconds": 24,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-28",
+      "clip": "5473790",
+      "seconds": 28,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-32",
+      "clip": "5473790",
+      "seconds": 32,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-5473790-36",
+      "clip": "5473790",
+      "seconds": 36,
+      "warn": false,
+      "act": false,
+      "categories": [],
+      "rationale": "Generic forest trail; no obvious identifying clues"
+    },
+    {
+      "id": "n-37063950-01",
+      "clip": "37063950",
+      "seconds": 1,
+      "warn": true,
+      "act": true,
+      "categories": [
+        "storefront",
+        "license_plate"
+      ],
+      "rationale": "Readable independent storefront and plate identifiers"
+    },
+    {
+      "id": "n-37063950-03",
+      "clip": "37063950",
+      "seconds": 3,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    },
+    {
+      "id": "n-37063950-05",
+      "clip": "37063950",
+      "seconds": 5,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    },
+    {
+      "id": "n-37063950-07",
+      "clip": "37063950",
+      "seconds": 7,
+      "warn": true,
+      "act": false,
+      "categories": [
+        "storefront"
+      ],
+      "rationale": "Readable identifying storefront; other markings not confidently readable"
+    }
+  ],
+  "holdout": [
+    "n-3647789-00",
+    "n-3647789-04",
+    "n-3647789-08",
+    "n-3647789-12",
+    "n-3647789-16",
+    "n-3647789-20",
+    "n-5473790-00",
+    "n-5473790-10",
+    "n-5473790-20",
+    "n-5473790-30",
+    "n-5473790-40",
+    "n-5473790-50",
+    "n-37063950-00",
+    "n-37063950-02",
+    "n-37063950-04",
+    "n-37063950-06",
+    "n-37063950-08",
+    "n-37063950-09"
+  ],
+  "sequences": [
+    {
+      "id": "s-generic",
+      "domain": "synthetic",
+      "act": false,
+      "rationale": "Generic signage, no identifying evidence",
+      "frames": [
+        {
+          "id": "frame-01",
+          "at": 0
+        },
+        {
+          "id": "frame-02",
+          "at": 4000
+        },
+        {
+          "id": "frame-03",
+          "at": 8000
+        },
+        {
+          "id": "frame-04",
+          "at": 12000
+        },
+        {
+          "id": "frame-05",
+          "at": 16000
+        },
+        {
+          "id": "frame-06",
+          "at": 20000
+        },
+        {
+          "id": "frame-07",
+          "at": 24000
+        },
+        {
+          "id": "frame-08",
+          "at": 28000
+        },
+        {
+          "id": "frame-09",
+          "at": 32000
+        },
+        {
+          "id": "frame-10",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-generic-reverse",
+      "domain": "synthetic",
+      "act": false,
+      "rationale": "Reversed generic scene variants; no new identifying evidence",
+      "frames": [
+        {
+          "id": "frame-10",
+          "at": 0
+        },
+        {
+          "id": "frame-09",
+          "at": 4000
+        },
+        {
+          "id": "frame-08",
+          "at": 8000
+        },
+        {
+          "id": "frame-07",
+          "at": 12000
+        },
+        {
+          "id": "frame-06",
+          "at": 16000
+        },
+        {
+          "id": "frame-05",
+          "at": 20000
+        },
+        {
+          "id": "frame-04",
+          "at": 24000
+        },
+        {
+          "id": "frame-03",
+          "at": 28000
+        },
+        {
+          "id": "frame-02",
+          "at": 32000
+        },
+        {
+          "id": "frame-01",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-generic-repeat",
+      "domain": "synthetic",
+      "act": false,
+      "rationale": "Repeated generic scene cannot create new identifying information",
+      "frames": [
+        {
+          "id": "frame-01",
+          "at": 0
+        },
+        {
+          "id": "frame-01",
+          "at": 4000
+        },
+        {
+          "id": "frame-01",
+          "at": 8000
+        },
+        {
+          "id": "frame-01",
+          "at": 12000
+        },
+        {
+          "id": "frame-01",
+          "at": 16000
+        },
+        {
+          "id": "frame-01",
+          "at": 20000
+        },
+        {
+          "id": "frame-01",
+          "at": 24000
+        },
+        {
+          "id": "frame-01",
+          "at": 28000
+        },
+        {
+          "id": "frame-01",
+          "at": 32000
+        },
+        {
+          "id": "frame-01",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-generic-alternate",
+      "domain": "synthetic",
+      "act": false,
+      "rationale": "Alternating non-identifying generic signs",
+      "frames": [
+        {
+          "id": "frame-02",
+          "at": 0
+        },
+        {
+          "id": "frame-03",
+          "at": 4000
+        },
+        {
+          "id": "frame-02",
+          "at": 8000
+        },
+        {
+          "id": "frame-03",
+          "at": 12000
+        },
+        {
+          "id": "frame-02",
+          "at": 16000
+        },
+        {
+          "id": "frame-03",
+          "at": 20000
+        },
+        {
+          "id": "frame-02",
+          "at": 24000
+        },
+        {
+          "id": "frame-03",
+          "at": 28000
+        },
+        {
+          "id": "frame-02",
+          "at": 32000
+        },
+        {
+          "id": "frame-03",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-two-identifiers",
+      "domain": "synthetic",
+      "act": true,
+      "rationale": "Persistent independent readable fictional storefront and transit identifiers",
+      "frames": [
+        {
+          "id": "frame-11",
+          "at": 0
+        },
+        {
+          "id": "frame-12",
+          "at": 4000
+        },
+        {
+          "id": "frame-13",
+          "at": 8000
+        },
+        {
+          "id": "frame-14",
+          "at": 12000
+        },
+        {
+          "id": "frame-15",
+          "at": 16000
+        },
+        {
+          "id": "frame-16",
+          "at": 20000
+        },
+        {
+          "id": "frame-17",
+          "at": 24000
+        },
+        {
+          "id": "frame-18",
+          "at": 28000
+        },
+        {
+          "id": "frame-19",
+          "at": 32000
+        },
+        {
+          "id": "frame-20",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-multiple-identifiers",
+      "domain": "synthetic",
+      "act": true,
+      "rationale": "Multiple independent readable identifying categories",
+      "frames": [
+        {
+          "id": "frame-21",
+          "at": 0
+        },
+        {
+          "id": "frame-22",
+          "at": 4000
+        },
+        {
+          "id": "frame-23",
+          "at": 8000
+        },
+        {
+          "id": "frame-24",
+          "at": 12000
+        },
+        {
+          "id": "frame-25",
+          "at": 16000
+        },
+        {
+          "id": "frame-26",
+          "at": 20000
+        },
+        {
+          "id": "frame-27",
+          "at": 24000
+        },
+        {
+          "id": "frame-28",
+          "at": 28000
+        },
+        {
+          "id": "frame-29",
+          "at": 32000
+        },
+        {
+          "id": "frame-30",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-gradual",
+      "domain": "synthetic",
+      "act": true,
+      "rationale": "Independent identifiers appear across successive frames",
+      "frames": [
+        {
+          "id": "frame-01",
+          "at": 0
+        },
+        {
+          "id": "frame-02",
+          "at": 4000
+        },
+        {
+          "id": "frame-03",
+          "at": 8000
+        },
+        {
+          "id": "frame-04",
+          "at": 12000
+        },
+        {
+          "id": "frame-05",
+          "at": 16000
+        },
+        {
+          "id": "frame-11",
+          "at": 20000
+        },
+        {
+          "id": "frame-12",
+          "at": 24000
+        },
+        {
+          "id": "frame-13",
+          "at": 28000
+        },
+        {
+          "id": "frame-21",
+          "at": 32000
+        },
+        {
+          "id": "frame-22",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-late-evidence",
+      "domain": "synthetic",
+      "act": true,
+      "rationale": "Identifying evidence appears only in the final frames",
+      "frames": [
+        {
+          "id": "frame-01",
+          "at": 0
+        },
+        {
+          "id": "frame-02",
+          "at": 4000
+        },
+        {
+          "id": "frame-03",
+          "at": 8000
+        },
+        {
+          "id": "frame-04",
+          "at": 12000
+        },
+        {
+          "id": "frame-05",
+          "at": 16000
+        },
+        {
+          "id": "frame-06",
+          "at": 20000
+        },
+        {
+          "id": "frame-07",
+          "at": 24000
+        },
+        {
+          "id": "frame-08",
+          "at": 28000
+        },
+        {
+          "id": "frame-21",
+          "at": 32000
+        },
+        {
+          "id": "frame-22",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "s-identifiers-repeat",
+      "domain": "synthetic",
+      "act": true,
+      "rationale": "Two readable independent identifiers remain visible; repeating a category must not inflate its contribution",
+      "frames": [
+        {
+          "id": "frame-11",
+          "at": 0
+        },
+        {
+          "id": "frame-11",
+          "at": 4000
+        },
+        {
+          "id": "frame-11",
+          "at": 8000
+        },
+        {
+          "id": "frame-11",
+          "at": 12000
+        },
+        {
+          "id": "frame-11",
+          "at": 16000
+        },
+        {
+          "id": "frame-11",
+          "at": 20000
+        },
+        {
+          "id": "frame-11",
+          "at": 24000
+        },
+        {
+          "id": "frame-11",
+          "at": 28000
+        },
+        {
+          "id": "frame-11",
+          "at": 32000
+        },
+        {
+          "id": "frame-11",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "n-facade",
+      "domain": "natural",
+      "act": false,
+      "rationale": "Facade persists without independent readable identifiers",
+      "frames": [
+        {
+          "id": "n-3647789-00",
+          "at": 0
+        },
+        {
+          "id": "n-3647789-02",
+          "at": 2000
+        },
+        {
+          "id": "n-3647789-04",
+          "at": 4000
+        },
+        {
+          "id": "n-3647789-06",
+          "at": 6000
+        },
+        {
+          "id": "n-3647789-08",
+          "at": 8000
+        },
+        {
+          "id": "n-3647789-10",
+          "at": 10000
+        },
+        {
+          "id": "n-3647789-12",
+          "at": 12000
+        },
+        {
+          "id": "n-3647789-14",
+          "at": 14000
+        },
+        {
+          "id": "n-3647789-16",
+          "at": 16000
+        },
+        {
+          "id": "n-3647789-18",
+          "at": 18000
+        }
+      ]
+    },
+    {
+      "id": "n-trail",
+      "domain": "natural",
+      "act": false,
+      "rationale": "Changing forest trail, no obvious identifying clues",
+      "frames": [
+        {
+          "id": "n-5473790-00",
+          "at": 0
+        },
+        {
+          "id": "n-5473790-04",
+          "at": 4000
+        },
+        {
+          "id": "n-5473790-08",
+          "at": 8000
+        },
+        {
+          "id": "n-5473790-12",
+          "at": 12000
+        },
+        {
+          "id": "n-5473790-16",
+          "at": 16000
+        },
+        {
+          "id": "n-5473790-20",
+          "at": 20000
+        },
+        {
+          "id": "n-5473790-24",
+          "at": 24000
+        },
+        {
+          "id": "n-5473790-28",
+          "at": 28000
+        },
+        {
+          "id": "n-5473790-32",
+          "at": 32000
+        },
+        {
+          "id": "n-5473790-36",
+          "at": 36000
+        }
+      ]
+    },
+    {
+      "id": "n-street",
+      "domain": "natural",
+      "act": true,
+      "rationale": "Independent storefront and plate evidence at sequence start, then continuing storefront context",
+      "frames": [
+        {
+          "id": "n-37063950-00",
+          "at": 0
+        },
+        {
+          "id": "n-37063950-01",
+          "at": 1000
+        },
+        {
+          "id": "n-37063950-02",
+          "at": 2000
+        },
+        {
+          "id": "n-37063950-03",
+          "at": 3000
+        },
+        {
+          "id": "n-37063950-04",
+          "at": 4000
+        },
+        {
+          "id": "n-37063950-05",
+          "at": 5000
+        },
+        {
+          "id": "n-37063950-06",
+          "at": 6000
+        },
+        {
+          "id": "n-37063950-07",
+          "at": 7000
+        },
+        {
+          "id": "n-37063950-08",
+          "at": 8000
+        },
+        {
+          "id": "n-37063950-09",
+          "at": 9000
+        }
+      ]
+    }
+  ]
+}

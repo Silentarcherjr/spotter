@@ -4,7 +4,7 @@
 
 ## One-line pitch
 
-Every Twitch tool watches the chat. **Spotter watches the streamer**: how exposed they are (Off the Map), how much energy they have left (Second Wind), and who can cover for them when they need a break (Tag Out).
+Most Twitch tools watch the chat. **Spotter watches the streamer**: how exposed they are (Off the Map), how much energy they have left (Second Wind), and who can cover for them when they need a break (Tag Out).
 
 ## Why this wins
 
@@ -22,7 +22,7 @@ Models only return structured observations (clues, confidences, classifications)
 1. **Spotter never outputs a location.** The vision prompt asks for *identifying clues*, never for a place. The output schema has no location field. Clue descriptions are generic ("readable street sign", "transit route number visible"), never the text itself.
 2. **Everything is private to the streamer.** The findability score, clues and energy data are shown only on the streamer's dashboard unless they opt in to a public HUD.
 3. **Local first.** Audio never leaves the machine; only numeric features are kept. Frames sent to the vision model are not stored.
-4. **Advisory, not a guarantee.** A low score is labelled "no obvious clues detected", never "safe".
+4. **Advisory, not a guarantee.** A safety net, not a guarantee. A low score is labelled "no obvious clues detected", never "safe".
 5. **Honest demo.** Any simulated input shows a visible `SIMULATED` badge.
 
 ---
@@ -34,7 +34,7 @@ Models only return structured observations (clues, confidences, classifications)
 - Vision model (OpenAI Responses API, structured output) returns a list of clues: `{category, description, severity 1-5, confidence 0-1}`. Categories: `street_sign`, `storefront`, `transit`, `landmark`, `license_plate`, `house_number`, `skyline`, `vehicle_marking`, `reflection`, `other`.
 - `scoreFindability(clues, history)` (pure code) computes a 0–100 score with decay over time (clues seen across several frames add up: combinations are what locate people).
 - Thresholds (configurable): ≥60 warn privately; ≥80 act: switch to the "Privacy" scene or enable a blur filter (`SetSourceFilterEnabled`), and drop a stream marker.
-- **Chat Guard:** the streamer privately lists sensitive terms (neighbourhood, nearby streets, landmarks). Spotter pushes them as Twitch **Blocked Terms** (Helix, so Twitch blocks them before display). For paraphrased guesses ("is that the 7-Eleven by the bridge?"), an LLM classifier flags "location-guessing" messages and Spotter deletes them (Helix Delete Chat Messages) and notifies mods.
+- **Chat Guard:** the streamer privately lists sensitive terms (neighbourhood, nearby streets, landmarks). Spotter pushes them as Twitch **Blocked Terms** (Helix, so Twitch blocks them before display). For paraphrased guesses ("is that the 7-Eleven by the bridge?"), an LLM classifier flags "location-guessing" messages and Spotter flags them privately for mods by default; automatic deletion (Helix Delete Chat Messages) is an explicit opt-in.
 - **Exposure replay:** after an alert, the dashboard shows which clues raised the score and when.
 
 **Demo moment:** IRL footage walks down a street. Meter 12 → 47 → 87 ("storefront + transit route + reflection"). Scene auto-blurs. A planted chat message naming the street disappears. The replay shows what gave it away.

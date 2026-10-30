@@ -79,7 +79,7 @@ export class DemoSession {
     for (const message of chat) {
       this.rally = advanceRally(this.rally, message.id, this.now);
       const action = decideModeration(mockChatClassifier(message.fixture));
-      if (action === 'delete') this.moderation.push({ id: message.id, action, simulated: true });
+      if (action !== 'none') this.moderation.push({ id: message.id, action, simulated: true });
     }
     this.raid({ type: 'energy', score: this.energy });
     this.events = [...this.events, frame, audio, ...chat, this.crew].slice(-120);
