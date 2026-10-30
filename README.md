@@ -252,7 +252,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**117 automated tests (117 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**120 automated tests (120 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -278,3 +278,5 @@ Curves use elapsed time, actual sample spacing and event annotations. Correlatio
 In real mode the private Frame Monitor shows only the last successfully analyzed OBS frame, with generic clue chips. It is held in memory, never put into the status/report/overlay payload, never written to disk and served with no-store through a private-dashboard header. Failure/disconnection clears the preview; SIM alone uses the illustrative fixture. Public overlay names come from EventSub display names, with a cached Helix lookup after restart; lookup failure never prints a numeric ID.
 
 The revised demo changes **synthetic inputs only**: irregular energy≈75→43–44 and high exposure≈80–86, with the same core scores, calibration, thresholds and approval rules. Optional `SIM_DISPLAY_NAME` sets its clearly simulated public host label. Demo-only `/api/demo/playback` and `/api/demo/step` pause/advance virtual playback for reproducible captures; they do not exist in real mode. All ten final design PNGs are local/ignored in `data/screens/`; earlier screenshots are preserved in `data/screens-before-final-pass/`. These are design captures, not additional live-service proof.
+
+In `?record=1` the source selector is hidden while the named source label remains visible. Select a recording by URL when needed: `&take=measured-energy`, `&take=combined-alert`, `&take=relay-round-trip` or `&take=current`. Dashboard and report hide absent/zero-only chat activity instead of drawing a baseline at0, with the legend `chat not recorded`; genuine zero intervals remain part of an otherwise observed active series. This is presentation only; stored data, statistics and decision rules are unchanged. Event captions use actual SVG text widths, three non-overlapping rows and leader lines to their original timestamps.

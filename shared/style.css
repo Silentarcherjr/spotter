@@ -151,3 +151,14 @@ body[data-page="report"] svg#curves { height: 360px; max-height: none; }
 /* Recording keeps setup controls out of the shot; full controls remain in the normal view. */
 body.recording #recalibrate { display: none; }
 body.recording .clue-chips { max-height: 80px; overflow-y: auto; }
+/* The caption lives outside the dial geometry, independent of the score digits. */
+.exposure-dial .exposure-caption { position: absolute; top: calc(100% + 6px); left: -10px; right: -10px; text-align: center; font-size: 14px; line-height: 20px; letter-spacing: .08em; color: #c5d0e5; white-space: nowrap; }
+.exposure-instrument { margin-bottom: 32px; }
+body.recording .exposure-instrument { margin-bottom: 32px; }
+body.recording .exposure-dial { width: 140px; height: 140px; flex-basis: 140px; }
+body.recording .exposure-instrument { min-height: 140px; }
+body.recording .telemetry-source { display: none; }
+body.recording .data-provenance { margin-top: 8px; }
+.chat-unrecorded { color: #bdc9df; }
+body[data-page="report"].recording main { display: block; height: auto; overflow: visible; }
+body.recording .chips-title { padding-top: 1px; }
