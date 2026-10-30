@@ -8,3 +8,4 @@ export const parseAiTimeoutMs = (value?: string | number): number => integerSett
 export const parseEnergyAlertThreshold = (value?: string | number): number => integerSetting(value, 45, 1, 100, 'ENERGY_ALERT_THRESHOLD');
 export const parseTagOutEnergyThreshold = (value?: string | number): number => integerSetting(value, 45, 1, 100, 'TAGOUT_ENERGY_THRESHOLD');
 export const parseTagOutSustainS = (value?: string | number): number => integerSetting(value, 60, 1, 3600, 'TAGOUT_SUSTAIN_S');
+export const parseVisionCaptureIntervalMs = (value?: string | number): number => integerSetting(value, 4000, 1000, 60000, 'VISION_CAPTURE_INTERVAL_MS');

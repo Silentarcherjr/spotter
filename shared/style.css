@@ -162,3 +162,4 @@ body.recording .data-provenance { margin-top: 8px; }
 .chat-unrecorded { color: #bdc9df; }
 body[data-page="report"].recording main { display: block; height: auto; overflow: visible; }
 body.recording .chips-title { padding-top: 1px; }
+#latency { font-size: 14px; line-height: 1.35; max-width: 285px; margin: 8px 0; }

@@ -1,10 +1,18 @@
+import { distribution } from '../../observability/metrics.ts';
 import type { TelemetryEvent } from '../../presentation/telemetry.ts';
 import { decideExposure, dismissExposure, initialExposure, scoreFindability } from '../../core/exposure.ts';
 import type { Clue, FrameObservation } from '../../core/types.ts';
 import { clueDescriptions } from '../../ai/vision-contract.ts';
 
-interface Dependencies { available?: () => boolean; capture: () => Promise<string>; analyze: (frame: string) => Promise<Clue[]>; privacy: () => Promise<void>; restore: () => Promise<void>; marker: () => Promise<unknown> }
+interface Dependencies { clock?: () => number; confirmPrivacy?: () => Promise<void>; available?: () => boolean; capture: () => Promise<string>; analyze: (frame: string) => Promise<Clue[]>; privacy: () => Promise<void>; restore: () => Promise<void>; marker: () => Promise<unknown> }
 export class OffTheMap {
+  private measurements: { captureMs: number | null; modelMs: number | null; decisionMs: number | null; analysisMs: number | null; sceneMs: number | null; unavailable: boolean; confirmationFailed: boolean }[] = [];
+  latency() {
+    const rows = this.measurements;
+    return { window: 200, attempts: rows.length, unavailable: rows.filter(row => row.unavailable).length, confirmationFailed: rows.filter(row => row.confirmationFailed).length,
+      capture: distribution(rows.flatMap(row => row.captureMs === null ? [] : [row.captureMs])), model: distribution(rows.flatMap(row => row.modelMs === null ? [] : [row.modelMs])), decision: distribution(rows.flatMap(row => row.decisionMs === null ? [] : [row.decisionMs])),
+      analysis: distribution(rows.flatMap(row => row.analysisMs === null ? [] : [row.analysisMs])), scene: distribution(rows.flatMap(row => row.sceneMs === null ? [] : [row.sceneMs])) };
+  }
   private dependencies: Dependencies;
   private thresholds: { warn: number; act: number };
   private exposure = initialExposure();
@@ -27,13 +35,16 @@ export class OffTheMap {
     if (this.busy || this.dismissing) return;
     this.busy = true;
     const revision = this.revision;
+    const clock = this.dependencies.clock ?? (() => performance.now()); const start = clock();
+    const timing = { captureMs: null as number | null, modelMs: null as number | null, decisionMs: null as number | null, analysisMs: null as number | null, sceneMs: null as number | null, unavailable: false, confirmationFailed: false };
     try {
       let clues: Clue[]; let image: string;
-      try { image = await this.dependencies.capture(); clues = await this.dependencies.analyze(image); }
-      catch { this.lastPreview = null; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
-      if (revision !== this.revision || this.dependencies.available?.() === false) { this.lastPreview = null; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
+      try { image = await this.dependencies.capture(); const captured = clock(); timing.captureMs = captured - start; clues = await this.dependencies.analyze(image); timing.modelMs = clock() - captured; }
+      catch { timing.unavailable = true; this.lastPreview = null; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
+      if (revision !== this.revision || this.dependencies.available?.() === false) { timing.unavailable = true; this.lastPreview = null; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; return; }
       this.lastPreview = /^data:image\/(?:jpeg|png);base64,/.test(image) && image.length <= 12_000_000 ? { image, at: now, clues: clues.map(clue => ({ ...clue, description: clueDescriptions[clue.category] })) } : null;
       const decision = decideExposure(this.exposure, scoreFindability(clues, this.frames, now), this.thresholds);
+      timing.analysisMs = clock() - start; timing.decisionMs = Math.max(0, timing.analysisMs - timing.captureMs! - timing.modelMs!);
       this.exposure = decision.state;
       this.frames = [...this.frames.filter((frame) => now - frame.at <= 120_000), { at: now, clues }];
       this.timeline = [...this.timeline, { at: now, score: this.exposure.score, actions: decision.actions, simulated: false as const }].slice(-120);
@@ -43,7 +54,12 @@ export class OffTheMap {
         try {
           if (action === 'privacy') {
             const pending = this.dependencies.privacy(); this.privacyPending = pending;
-            try { await pending; this.privacyActive = true; this.actionStatus = 'privacy applied'; this.presentationEvents = [...this.presentationEvents, { at: now, label: 'Privacy', kind: 'privacy' as const }].slice(-120); }
+            try { await pending; this.privacyActive = true;
+              if (this.dependencies.confirmPrivacy) {
+                try { await this.dependencies.confirmPrivacy(); timing.sceneMs = clock() - start; }
+                catch { timing.confirmationFailed = true; }
+              }
+              this.actionStatus = 'privacy applied'; this.presentationEvents = [...this.presentationEvents, { at: now, label: 'Privacy', kind: 'privacy' as const }].slice(-120); }
             finally { if (this.privacyPending === pending) this.privacyPending = null; }
           }
           if (action === 'marker') {
@@ -53,11 +69,12 @@ export class OffTheMap {
             if (marker && (typeof marker.id === 'string' || typeof marker.id === 'number') && /^[A-Za-z0-9_-]{1,128}$/.test(String(marker.id)) && typeof marker.position_seconds === 'number' && Number.isFinite(marker.position_seconds) && typeof marker.created_at === 'string' && Number.isFinite(Date.parse(marker.created_at))) this.lastMarker = { id: String(marker.id), positionSeconds: marker.position_seconds, createdAt: marker.created_at };
           }
         } catch (error) {
+          if (action === 'privacy') timing.confirmationFailed = true;
           this.actionStatus = 'action unavailable';
           if (action === 'marker') { this.markerStatus = 'unavailable'; const code = error instanceof Error ? /^Twitch request unavailable \((\d{3})\)$/.exec(error.message) : null; this.markerHttpStatus = code ? Number(code[1]) : null; }
         }
       }
-    } finally { this.busy = false; }
+    } finally { this.measurements = [...this.measurements, timing].slice(-200); this.busy = false; }
   }
   invalidateAnalysis(): void { this.lastPreview = null; this.revision++; this.exposure = decideExposure(this.exposure, null, this.thresholds).state; }
   async dismiss(): Promise<void> {

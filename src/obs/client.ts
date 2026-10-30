@@ -52,6 +52,13 @@ export class ObsClient {
       await this.limit(this.wire.call('SetCurrentProgramScene', { sceneName: this.config.privacyScene }));
     }
   }
+  async confirmPrivacy(): Promise<void> {
+    this.ready();
+    const confirmed = this.config.source && this.config.blurFilter
+      ? (await this.limit(this.wire.call('GetSourceFilter', { sourceName: this.config.source, filterName: this.config.blurFilter }))).filterEnabled
+      : (await this.limit(this.wire.call('GetCurrentProgramScene'))).currentProgramSceneName === this.config.privacyScene;
+    if (!confirmed) throw new Error('Privacy not confirmed');
+  }
   async restore(): Promise<void> {
     this.ready();
     if (this.config.source && this.config.blurFilter && this.previousFilter !== null) {

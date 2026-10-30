@@ -1,0 +1,322 @@
+[
+  {
+    "id": "frame-01",
+    "file": "frame-01.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-02",
+    "file": "frame-02.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-03",
+    "file": "frame-03.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-04",
+    "file": "frame-04.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-05",
+    "file": "frame-05.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-06",
+    "file": "frame-06.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-07",
+    "file": "frame-07.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-08",
+    "file": "frame-08.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-09",
+    "file": "frame-09.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-10",
+    "file": "frame-10.png",
+    "categories": [],
+    "warn": false,
+    "act": false,
+    "rationale": "Generic scene; no authored identifying evidence"
+  },
+  {
+    "id": "frame-11",
+    "file": "frame-11.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-12",
+    "file": "frame-12.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-13",
+    "file": "frame-13.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-14",
+    "file": "frame-14.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-15",
+    "file": "frame-15.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-16",
+    "file": "frame-16.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-17",
+    "file": "frame-17.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-18",
+    "file": "frame-18.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-19",
+    "file": "frame-19.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-20",
+    "file": "frame-20.png",
+    "categories": [
+      "storefront",
+      "transit"
+    ],
+    "warn": true,
+    "act": false,
+    "rationale": "Two independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-21",
+    "file": "frame-21.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-22",
+    "file": "frame-22.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-23",
+    "file": "frame-23.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-24",
+    "file": "frame-24.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-25",
+    "file": "frame-25.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-26",
+    "file": "frame-26.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-27",
+    "file": "frame-27.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-28",
+    "file": "frame-28.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-29",
+    "file": "frame-29.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  },
+  {
+    "id": "frame-30",
+    "file": "frame-30.png",
+    "categories": [
+      "storefront",
+      "transit",
+      "street_sign",
+      "house_number"
+    ],
+    "warn": true,
+    "act": true,
+    "rationale": "Multiple independent readable fictional identifiers"
+  }
+]

@@ -2,7 +2,7 @@
 
 **Every Twitch tool watches the chat. Spotter watches the streamer.**
 
-A local companion with three modules: Off the Map (identifying-clue exposure), Second Wind (personal voice energy) and Tag Out (click-approved crew raids). The model interprets; tested code decides.
+A local companion with three modules: Off the Map (identifying-clue exposure), Second Wind (personal voice energy) and Tag Out (click-approved crew raids). Observations from the model, decisions from tested code.
 
 ## Current status
 
@@ -147,7 +147,7 @@ Reruns reuse sources/items, repair settings/visibility/transforms/order, and upd
 
 ## Off the Map
 
-Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. `VISION_FRAME_WIDTH=1280` controls both video extraction and OBS screenshots (integer 128–4096); `AI_TIMEOUT_MS=15000` controls the AI request timeout (integer 1–120000 milliseconds). Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples JPEGs at `VISION_FRAME_WIDTH` (1280px by default) every four seconds.
+Set `OPENAI_API_KEY` and `OPENAI_MODEL` to a model supporting image input and strict Structured Outputs. Set `OPENAI_VISION_DETAIL=high` (default); `low` and `auto` are also accepted. `VISION_FRAME_WIDTH=1280` controls both video extraction and OBS screenshots (integer 128–4096); `AI_TIMEOUT_MS=15000` controls the AI request timeout (integer 1–120000 milliseconds). Invalid values are rejected before a request. No model name is hard-coded. Set `OBS_WEBSOCKET_PASSWORD`, `OBS_WEBSOCKET_URL` and `OBS_PRIVACY_SCENE`. Optionally set both `OBS_SOURCE` and `OBS_BLUR_FILTER` to use a filter. With these configured, the live server samples JPEGs at `VISION_FRAME_WIDTH` (1280px by default) at `VISION_CAPTURE_INTERVAL_MS` (4000 ms by default; 2000 ms is supported).
 
 The schema contains clue categories, generic allowlisted descriptions, severity and confidence. Runtime parsing rejects extra fields, literal text, invalid values, refusals and incomplete responses. Core scoring combines distinct categories over time with decay. Configure `EXPOSURE_WARN`/`EXPOSURE_ACT` (defaults 60/80). A warning stays private; an action applies privacy and requests a marker. Missing analysis retains the score and cannot trigger an action. Dismiss restores the previous scene/filter state; restoration failure remains retryable.
 
@@ -252,7 +252,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**120 automated tests (120 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**129 automated tests (129 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -280,3 +280,35 @@ In real mode the private Frame Monitor shows only the last successfully analyzed
 The revised demo changes **synthetic inputs only**: irregular energy≈75→43–44 and high exposure≈80–86, with the same core scores, calibration, thresholds and approval rules. Optional `SIM_DISPLAY_NAME` sets its clearly simulated public host label. Demo-only `/api/demo/playback` and `/api/demo/step` pause/advance virtual playback for reproducible captures; they do not exist in real mode. All ten final design PNGs are local/ignored in `data/screens/`; earlier screenshots are preserved in `data/screens-before-final-pass/`. These are design captures, not additional live-service proof.
 
 In `?record=1` the source selector is hidden while the named source label remains visible. Select a recording by URL when needed: `&take=measured-energy`, `&take=combined-alert`, `&take=relay-round-trip` or `&take=current`. Dashboard and report hide absent/zero-only chat activity instead of drawing a baseline at0, with the legend `chat not recorded`; genuine zero intervals remain part of an otherwise observed active series. This is presentation only; stored data, statistics and decision rules are unchanged. Event captions use actual SVG text widths, three non-overlapping rows and leader lines to their original timestamps.
+
+## Observations, decisions, and residual latency
+
+**Observations from the model, decisions from tested code.** This wording distinguishes typed model evidence from the tested TypeScript policy that computes scores and approves actions. It does not change that policy.
+
+The exposure score measures the accumulation of identifying clues over time, with the existing decay and category combination rules. It is not a single-frame censorship classifier. Repeating one clue does not necessarily raise the score. A low score means “no obvious clues detected,” never “safe.” A clue can already have appeared publicly before the next sample, model response, or scene switch: there is residual latency.
+
+Set `VISION_CAPTURE_INTERVAL_MS=4000` (default), or `2000` for more frequent sampling. There is no backlog: an in-flight sample skips subsequent timer opportunities. Sampling adds approximately 0–4 seconds of waiting at 4000 ms, or 0–2 seconds at 2000 ms, before capture; slow analysis may add more. This waiting is **outside** the measured capture-to-action latency. OBS rendering/transition, encoding, network and Twitch player latency are also outside the measurement; OBS program-scene readback confirms the scene assignment, not the final pixel seen by a viewer.
+
+`/api/latency` and the private dashboard show median, nearest-rank p95 and n for confirmed scene changes. The last 200 real sample attempts separately track capture, model, decision, analysis, missing analysis and failed confirmations. Samples without an action do not count as completed protection. SIM does not invent real timings. With no live confirmed actions, the dashboard explicitly labels the controlled recorded benchmark instead.
+
+Measured 2026-10-30 on this local machine: **capture → confirmed Privacy median 2.15 s, p95 2.62 s, n=10**, 0 unavailable analyses. Real OBS, real OpenRouter `openai/gpt-4.1-mini`, high detail, 1280 px, 4000 ms cadence. This is a **controlled benchmark with original synthetic input**, ten rearmed sequences: eight triggered on the first sampled frame and two on the second. The timer starts with the triggering capture, not the earlier evidence-accumulation period. It is not an organic IRL timing distribution, a service guarantee or a viewer-latency measure; n=10 makes p95 the largest observed value. Repeated attempts with the natural clip did not cross 80, so no completed-action latency is claimed for those attempts. No thresholds or observations were forced.
+
+Run `npm run bench:latency` with OBS open and stream/record outputs stopped. It temporarily isolates Spotter's OBS connection, uses the existing local IRL clip and unchanged temporal decision path, and restores the prior scene/media state. Ten rearmed sequences are capped at nine actual samples each. Use `npm run bench:latency -- --fixture` to reproduce the controlled synthetic-input benchmark: ffmpeg renders the original tracked frame-21 into a temporary local clip in data/, patches only the media source, then restores its original settings. No streaming or recording is started. Twitch markers are excluded from this controlled benchmark; production marker behavior is unchanged. Numeric timings stay in ignored `data/takes/latency/latest.json`; frames remain in memory.
+
+Cost: 4000 ms allows at most **900 vision requests/hour**; 2000 ms allows **1800/hour**, roughly twice the potential cost. Busy-sample skips reduce actual calls; chat classification is additional. At the verified GPT-4.1 mini list price ($0.40/M input, $1.60/M output), a 1280×720 image is approximately 1491 input tokens (32 px patches ×1.62), or ~$0.00060 image input per call: ~$0.54/hour at 4 s and ~$1.07/hour at 2 s **for image input alone**. Prompt/schema and output tokens are additional. This is an OpenAI reference estimate, not measured billing or a quote for OpenRouter; routing, caching and provider prices can differ. Sources: [model pricing](https://developers.openai.com/api/docs/models/gpt-4.1-mini), [image token accounting](https://developers.openai.com/api/docs/guides/images-vision).
+
+## Small authored evaluation
+
+`npm run eval` calls the configured real provider against 30 original labelled synthetic scenes and 40 original English/Spanish chat lines. No real places or external footage are used. `npm run eval -- --validate` validates the frozen dataset offline. Sources, licence, gold labels and tracked PNGs are in `test/fixtures/eval/`; per-case outputs stay in ignored `data/eval/`. See [EVAL.md](docs/EVAL.md) for the dataset hash, confusion matrices, coverage and methodology.
+
+Measured 2026-10-30 with `openai/gpt-4.1-mini` via OpenRouter, high detail, 1280×720; no unavailable cases:
+
+| Task | Precision | Recall | TP / FP / FN / TN |
+|---|---:|---:|---|
+| Independent-frame exposure ≥60 | 100.0% | 50.0% | 10 / 0 / 10 / 10 |
+| Independent-frame exposure ≥80 | 85.7% | 60.0% | 6 / 1 / 4 / 19 |
+| Identifying category micro | 64.3% | 75.0% | 45 / 25 / 15 / 215 |
+| Chat guessing (40 lines) | 100.0% | 100.0% | 20 / 0 / 0 / 20 |
+| Chat guessing with existing confidence ≥0.8 | 100.0% | 100.0% | 20 / 0 / 0 / 20 |
+
+These are a small, balanced, author-labelled development check, not a natural IRL holdout or a safety guarantee. Frame thresholds are tested with empty history, so they do not validate temporal protection. The warning detector missed half the authored risk examples; the action detector missed four and escalated one warning-only scene. Category errors matter even when binary chat accuracy looks perfect. I propose **no threshold change yet**: add independently labelled licensed natural sequences and investigate category/severity misses before testing a lower warning threshold. This set alone cannot identify a defensible replacement for 60/80. Scoring, thresholds and calibration remain unchanged.

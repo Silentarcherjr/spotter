@@ -2,7 +2,7 @@ import { mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { parseCrewConfig } from './modules/tagout/crew.ts';
-import { parseVisionFrameWidth, parseAiTimeoutMs, parseEnergyAlertThreshold, parseTagOutEnergyThreshold, parseTagOutSustainS } from './config.ts';
+import { parseVisionCaptureIntervalMs, parseVisionFrameWidth, parseAiTimeoutMs, parseEnergyAlertThreshold, parseTagOutEnergyThreshold, parseTagOutSustainS } from './config.ts';
 import { parseVisionDetail } from './ai/responses.ts';
 import { createApp } from './app.ts';
 
@@ -25,7 +25,7 @@ const obs = process.env.OBS_WEBSOCKET_PASSWORD ? {
 } : undefined;
 const ai = process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL ? { timeoutMs: parseAiTimeoutMs(process.env.AI_TIMEOUT_MS), baseURL: process.env.AI_BASE_URL ?? '', key: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL, detail: parseVisionDetail(process.env.OPENAI_VISION_DETAIL) } : undefined;
 const crew = process.env.CREW_FILE ? parseCrewConfig(JSON.parse(await readFile(process.env.CREW_FILE, 'utf8')) as unknown) : [];
-const app = createApp({ tagoutPolicy: { energyThreshold: parseTagOutEnergyThreshold(process.env.TAGOUT_ENERGY_THRESHOLD), sustainSeconds: parseTagOutSustainS(process.env.TAGOUT_SUSTAIN_S) }, energyAlertThreshold: parseEnergyAlertThreshold(process.env.ENERGY_ALERT_THRESHOLD), databasePath, simulated: process.env.SIM === '1', ...(process.env.SIM_DISPLAY_NAME ? { demoDisplayName: process.env.SIM_DISPLAY_NAME } : {}), ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), crew, exposureThresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) }, ...(process.env.CREW_SHARED_SECRET ? { crewToken: process.env.CREW_SHARED_SECRET } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
+const app = createApp({ visionCaptureIntervalMs: parseVisionCaptureIntervalMs(process.env.VISION_CAPTURE_INTERVAL_MS), tagoutPolicy: { energyThreshold: parseTagOutEnergyThreshold(process.env.TAGOUT_ENERGY_THRESHOLD), sustainSeconds: parseTagOutSustainS(process.env.TAGOUT_SUSTAIN_S) }, energyAlertThreshold: parseEnergyAlertThreshold(process.env.ENERGY_ALERT_THRESHOLD), databasePath, simulated: process.env.SIM === '1', ...(process.env.SIM_DISPLAY_NAME ? { demoDisplayName: process.env.SIM_DISPLAY_NAME } : {}), ...(twitch ? { twitch } : {}), ...(obs ? { obs } : {}), ...(ai ? { ai } : {}), crew, exposureThresholds: { warn: Number(process.env.EXPOSURE_WARN ?? 60), act: Number(process.env.EXPOSURE_ACT ?? 80) }, ...(process.env.CREW_SHARED_SECRET ? { crewToken: process.env.CREW_SHARED_SECRET } : {}), ...(process.env.SIM_FRAME_DIR ? { frameDirectory: process.env.SIM_FRAME_DIR } : {}) });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => { void app.close(); });
 }

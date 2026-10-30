@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import Fastify from 'fastify';
 import { loadRecordedTakes } from './presentation/takes.ts';
 import type { TelemetryEvent } from './presentation/telemetry.ts';
@@ -17,13 +18,14 @@ import { ChatGuard } from './modules/offthemap/chat-guard.ts';
 import { initialTagOut } from './core/tagout.ts';
 import { SecondWind, parseNumericFeatures } from './modules/secondwind/runtime.ts';
 import { advanceCombinedAlert } from './core/chat.ts';
-import { parseEnergyAlertThreshold, parseTagOutEnergyThreshold, parseTagOutSustainS } from './config.ts';
+import { parseVisionCaptureIntervalMs, parseEnergyAlertThreshold, parseTagOutEnergyThreshold, parseTagOutSustainS } from './config.ts';
 import { sessionReport } from './core/session.ts';
 import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; visionCaptureIntervalMs?: number; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
+  const visionCaptureIntervalMs = parseVisionCaptureIntervalMs(options.visionCaptureIntervalMs);
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
     for (const client of this.websocketServer.clients) client.terminate();
@@ -64,7 +66,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
   const obs = !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
   const ai = !options.simulated && options.ai ? new ResponsesAI(options.ai) : null;
-  const offthemap = obs && ai ? new OffTheMap({ available: () => obs.connected, capture: () => obs.capture(), analyze: (frame) => ai.vision(frame), privacy: () => obs.applyPrivacy(), restore: () => obs.restore(), marker: async () => {
+  const offthemap = obs && ai ? new OffTheMap({ available: () => obs.connected, capture: () => obs.capture(), analyze: (frame) => ai.vision(frame), privacy: () => obs.applyPrivacy(), confirmPrivacy: () => obs.confirmPrivacy(), restore: () => obs.restore(), marker: async () => {
     const id = twitch?.auth.identity?.userId;
     if (twitch && id) return twitch.helix.marker(id);
     throw new Error('Twitch unavailable');
@@ -100,7 +102,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     await twitch?.start();
     if (obs) void obs.start();
     if (tagout) { void updateCrew(); crewTimer = setInterval(() => { void updateCrew(); }, 5_000); crewTimer.unref(); }
-    if (offthemap) { visionTimer = setInterval(() => { void offthemap.sample(Date.now()); }, 4_000); visionTimer.unref(); }
+    if (offthemap) { visionTimer = setInterval(() => { void offthemap.sample(Date.now()); }, visionCaptureIntervalMs); visionTimer.unref(); }
     if (demo) { frames = await loadFrameFolder(true, options.frameDirectory ?? fileURLToPath(new URL('../test/fixtures/frames', import.meta.url))); demo.tick(); timer = setInterval(() => { if (!demoPaused) demo?.tick(); }, 4_000); timer.unref(); }
   });
   app.addHook('onClose', async () => { closing = true; offthemap?.invalidateAnalysis(); clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
@@ -116,6 +118,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
   });
   app.get('/api/review/takes', async () => (await takes).map(({ id, label, simulated, points }) => ({ id, label, simulated, samples: points.length })));
   app.get<{ Params: { id: string } }>('/api/review/takes/:id', async (request, reply) => { const take = (await takes).find(take => take.id === request.params.id); return take ?? reply.code(404).send({ error: 'Take unavailable' }); });
+  app.get('/api/latency', async () => ({ simulated: options.simulated, captureIntervalMs: visionCaptureIntervalMs, endpoint: 'OBS program confirmation; excludes player/encoder/network', live: offthemap?.latency() ?? null, benchmark: readLatencyBenchmark() }));
   app.get('/api/private/frame', async (request, reply) => { if (request.headers['x-spotter-preview'] !== 'private-dashboard') return reply.code(403).send({ error: 'Private dashboard only' }); return offthemap?.preview() ?? null; });
   app.get('/api/overlay', async () => {
     if (!hudEnabled) return { simulated: options.simulated || secondwind?.snapshot(Date.now()).audioSimulated === true, enabled: false };
@@ -210,4 +213,13 @@ export function createApp(options: { databasePath: string; simulated: boolean; f
     return { ...state, presentationEvents: [...presentationEvents, ...(offthemap?.snapshot().presentationEvents ?? [])] };
   });
   return app;
+}
+
+function readLatencyBenchmark(): unknown {
+  try {
+    const value = JSON.parse(readFileSync('data/takes/latency/latest.json', 'utf8')) as { at: unknown; controlled: unknown; simulatedInput?: boolean; scene: { n: number; medianMs: number | null; p95Ms: number | null }; model: unknown; width: unknown; intervalMs: unknown };
+    const stats = value.scene;
+    if (value.controlled !== true || !Number.isInteger(stats.n) || stats.n < 1 || ![stats.medianMs, stats.p95Ms].every(number => typeof number === 'number' && Number.isFinite(number) && number >= 0)) return null;
+    return { at: value.at, controlled: true, simulatedInput: value.simulatedInput === true, scene: { n: stats.n, medianMs: stats.medianMs, p95Ms: stats.p95Ms }, model: value.model, width: value.width, intervalMs: value.intervalMs };
+  } catch { return null; }
 }

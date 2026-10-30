@@ -34,7 +34,7 @@ docs/codex-log.md
 
 ## Hard rules
 
-1. **Model interprets, code decides.** Model calls return typed observations only. Every action (scene switch, blur, delete, raid, alert) is decided in `src/core/` by pure functions with unit tests.
+1. **Observations from the model, decisions from tested code.** Model calls return typed observations only. Every action (scene switch, blur, delete, raid, alert) is decided in `src/core/` by pure functions with unit tests.
 2. **Never produce or store a location.** The vision prompt must ask only for identifying clues. The structured-output schema must not contain any location/place/address/coordinates field. Clue descriptions are generic categories, never the literal text seen. Add a test that fails if the schema gains such a field.
 3. **No Twitch, OBS or AI calls outside** `src/twitch/`, `src/obs/`, `src/ai/`.
 4. **Audio stays local.** Only numeric features leave the sensor page. Never record or upload raw audio. Frames sent to the vision model are not written to disk.
