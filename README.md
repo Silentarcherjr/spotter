@@ -1,5 +1,27 @@
 # Spotter
 
+## For judges (2 minutes)
+
+[![Watch the Spotter demo](docs/media/00-youtube-thumbnail-1280x720.jpg)](VIDEO_URL)
+
+[Watch the video](VIDEO_URL) · [Evidence checklist](docs/LIVE_CHECKLIST.md) · [Evaluation and limits](docs/EVAL.md)
+
+- **Real Twitch + OBS:** real vision on a recorded IRL clip reached 82; Privacy appeared in the viewer's Twitch player, Twitch accepted the marker, and Dismiss restored Main. AutoMod held a harmless blocked-term test; a fictional location guess was flagged privately without deletion.
+- **Real crew raids:** outbound and return raids with `elsilentarcher` were confirmed through EventSub on October 29, including the receiver overlay. A later receiver-state regression was fixed with tests; the fix awaits live revalidation.
+- **Simulated media, real integrations:** the street clip is prerecorded and voice files are explicitly SIMULATED. Local numeric voice features drove low energy, the combined alert and the public HUD; natural microphone validation remains pending.
+- **QR limits:** offline encoded OBS output had 0/539 QR-positive protected frames versus 93/538 in the control. An earlier Twitch take had a visible control, but the latest repeat was inconclusive; repeatable viewer-side protection remains unverified. A safety net, not a guarantee.
+
+Run the scripted demo without API keys or an `.env` file (Node.js 22.18+):
+
+```sh
+npm ci && npm run demo
+```
+
+Open **http://127.0.0.1:5173/dashboard/**. Demo mode sets `SIM=1` and uses mock services. Stop it with Ctrl+C.
+
+**Tests: 181 pass, 0 fail, 0 skipped** (`npm test`). [Gallery](docs/media/) contains eight evidence/design images.
+
+
 **Most Twitch tools watch the chat. Spotter watches the streamer.**
 
 A safety net, not a guarantee.
