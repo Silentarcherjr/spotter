@@ -25,7 +25,8 @@
     "obs:hud-bridge": "node --experimental-strip-types --env-file-if-exists=.env scripts/obs-hud-bridge.ts",
     "crew:retire": "node --experimental-strip-types --env-file-if-exists=.env scripts/crew-retire.ts",
     "eval": "node --experimental-strip-types --env-file-if-exists=.env scripts/evaluate.ts",
-    "bench:latency": "node --experimental-strip-types --env-file-if-exists=.env scripts/latency.ts"
+    "bench:latency": "node --experimental-strip-types --env-file-if-exists=.env scripts/latency.ts",
+    "qr:obs-probe": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-obs-probe.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

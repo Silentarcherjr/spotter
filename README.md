@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**136 automated tests (136 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**139 automated tests (139 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -350,3 +350,7 @@ Natural standalone warning at60: precision100%, recall33.3% (TP2/FP0/FN4/TN12). 
 The natural sample is a development-unseen, author-labelled holdout, not independently adjudicated and not known to be absent from model training. Natural sequence/standalone subsets overlap and contain only one positive sequence and two positive action frames; synthetic sequences reuse related artwork. Therefore, neither the aggregate100% precision nor the natural100% sequence recall is a validated safety guarantee. See [EVAL.md](docs/EVAL.md) for confusion matrices, peaks, first crossings, failure accounting and limitations. **No threshold change**: first obtain more varied natural sequences at the operating cadence with independent labels.
 
 `npm run eval` runs all sections; `npm run eval -- --temporal` reruns only the sequence/natural extension using the frozen source clips; `npm run eval -- --validate` checks manifests offline. Reruns call the configured provider and can yield different observations. To restore source clips, use the public download URLs in labels.json and the exact filenames `data/eval/natural/pexels-<id>.mp4`; byte hashes are verified before inference. This holdout becomes regression data once inspected and must not be used as evidence for unseen generalization after tuning.
+
+## QR Guard feasibility (in progress)
+
+QR Guard is not enabled yet. Before selecting a local detection-only library, `npm run qr:obs-probe` checks the stock OBS Render Delay topology with synthetic colors:500ms on Main and screenshots of an unfiltered child source. It refuses active stream/record outputs, restores the original scene and removes its temporary source/filter. Captures stay in RAM; only numeric timing results go to ignored data/takes/qr-guard/. Real OBS measurements and Twitch player verification are pending; no pre-air protection claim is made. See [QR Guard investigation](docs/QR_GUARD.md).
