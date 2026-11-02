@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**164 automated tests (164 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**168 automated tests (168 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -355,17 +355,17 @@ The natural sample is a development-unseen, author-labelled holdout, not indepen
 
 `QR_GUARD=1` enables an independent150ms local loop in real OBS mode. It checks QR geometry without invoking a payload reader/decoder, logging QR text, sending frames to AI or saving captures. One hit acts by default: Privacy + an asynchronous Twitch marker + a generic `qr_guard` audit. Standard QR only; no other2D format claimed. Off the Map scoring/thresholds are unchanged.
 
-With OBS streaming/recording stopped, run `npm run qr:setup` before starting the app/stream. Main gets the stock500ms Render Delay; the sensor captures its **unfiltered child video source**. Privacy uses Cut and keeps Main rendering below an independently opaque stock color, then its existing browser/HUD. The running buffer is preserved on restore. This costs rendering work and keeps Main media/audio active during Privacy; silent test inputs were used, and camera audio synchronization/muting remains unverified.
+With OBS streaming/recording stopped, run `npm run qr:setup` before starting the app/stream. Main gets the stock500ms Render Delay; the sensor captures its **unfiltered child video source**. Setup selects global Cut and removes Main/Privacy transition overrides to avoid OBS transition-lock bug #11914. This changes the collection’s default transition; use a dedicated collection if other scenes need their previous default. Privacy keeps Main rendering below an independently opaque stock color, then its existing browser/HUD. The running buffer is preserved on restore. This costs rendering work and keeps Main media/audio active during Privacy; silent test inputs were used, and camera audio synchronization/muting remains unverified.
 
 Defaults/configuration are in [.env.example](.env.example): source,150ms interval (100–200),K1/N3,M14 clean captures (~2.1s),5000ms Dismiss grace,500ms expected delay,1280px capture. Automatic recovery also requires real clean elapsed time≥expected buffer delay. Dismiss explicitly overrides protection and restores the previous scene with its grace. Shared ownership prevents QR cleanup from undoing Off the Map protection. Failed capture/configuration/empty Main output reports **QR Guard unavailable** with no new QR action. The private dashboard alone shows status/latency/audit; public overlay/Privacy never identify the QR reason.
 
 | Real OBS measurement | Median | p95 | n |
 |---|---:|---:|---:|
-| Detection complete → confirmed Privacy, moving QR |10.47ms|12.87ms|20|
-| Capture start → confirmed Privacy, moving QR |70.82ms|92.93ms|20|
+| Detection complete → confirmed Privacy, moving QR |10.45ms|11.38ms|20|
+| Capture start → confirmed Privacy, moving QR |70.03ms|74.79ms|20|
 | JPEG1280px RPC, uniform-color probe only |7.87ms|10.46ms|50|
 
-The color probe observed an unfiltered-source lead of407–476ms (n8, polling uncertainty up to42ms). The moving-QR repeat completed20 protections/recoveries;12/12 later Main/Privacy opacity checks passed. These are OBS timings/readiness checks, **not viewer pixels or a hard bound**. Include sampling phase, skipped/busy captures, encoding/network/player delays. A code visible only between samples can be missed.
+The color probe observed an unfiltered-source lead of407–476ms (n8, polling uncertainty up to42ms). The post-transition-recovery moving-QR repeat completed20 protections/recoveries (November 2). Earlier continuous-buffer checks had12/12 opaque Main/Privacy samples. These are OBS timings/readiness checks, **not viewer pixels or a hard bound**. Include sampling phase, skipped/busy captures, encoding/network/player delays. A code visible only between samples can be missed.
 
 Detection development check:32/36 synthetic positives (6/6 encoded-motion samples),0/24 no-obvious-QR IRL detections. Four tiny/rotated36–48px cases were missed. Cases informed tuning; this is not an unseen holdout. Two supplied4K videos also produced local detections;1920px improved counts at more than twice the detector cost, so defaults remain unchanged. These unlabelled counts are not recall.
 
@@ -374,3 +374,10 @@ The first Twitch trial created real markers but its positive control failed: Mai
 Commands: `qr:setup`, `qr:fixtures` (`-- --moving` for motion), `qr:eval`, `qr:benchmark -- --moving --trials 20`. Local supplied-video screening: `node --experimental-strip-types scripts/qr-scan-video.ts "qr videos/example.mp4" 1280` (or1920). Videos/numeric evidence remain ignored under data/ or qr videos/; captured frames never go to disk. See [EVAL](docs/EVAL.md) and [QR investigation/setup](docs/QR_GUARD.md) for methodology, failures and limits.
 
 Evidence recording uses a fresh blank **LOCAL RECORDING ONLY** profile on secondary OBS4456, without duplicating Twitch settings or reading service credentials. It requires that profile and muted audio inputs before recording, preserves the prior profile/mutes/settings for restoration, and never starts a stream. The primary OBS alone is used for the public clip/Privacy proof.
+
+
+QR output verification (November 2): an offline **encoded program recording**, with QR Guard disabled, reproduced Privacy staying visible even after requesting Main. This matches OBS's [confirmed transition override lock](https://github.com/obsproject/obs-studio/issues/11914); the [proposed upstream fix](https://github.com/obsproject/obs-studio/pull/14093) was still open when checked. An offline Studio Mode round-trip plus uniform global Cut/no Main/Privacy overrides recovered the output. Do not install an unmerged patch or third-party plugin for this workaround. `npm run qr:setup -- --recover-transitions` performs the explicit recovery only with both outputs stopped, preserving the prior Studio Mode setting/preview. Stop Spotter’s OBS connection before maintenance.
+
+The same 18 s known-input recordings then yielded: unprotected control **93/538 QR-visible encoded frames**, protected **0/539**, Dismiss **31/539** (one second visible during its intentional grace, subsequent cycles protected). The protected sensor saw20 positive samples,3 privacy actions,0 capture failures. One blank start frame occurred in each recovered recording and is disclosed. This validates local output for the tested synthetic QR; the earlier Twitch trials remain inconclusive until a fresh actual-player control succeeds. No score, threshold, detector dependency or payload decoding changed.
+
+Reproduce offline with `npm run qr:program-proof -- control --leave-disconnected` (or `protected` / `dismiss`), then `npm run qr:analyze-take -- data/takes/qr-guard/program-control-20261102.mov --program --expect-qr`; use `--expect-no-qr` for protected output. The helper records only known TEST-ONLY media/public overlay on primary OBS under a fresh blank profile with muted audio, never starts streaming, checkpoints restoration metadata in ignored data/, then restores the prior profile/video/mutes/media. It never records a desktop. Captured detector frames remain RAM-only; these explicitly requested output-evidence movies are private local artifacts.

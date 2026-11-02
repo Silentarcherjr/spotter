@@ -140,3 +140,23 @@ A subsequent offline check, with QR automation disconnected, temporarily played 
 An independently generated 6 s composition validated the recording analyzer: 360 decoded frames, 62 detections from 2.000–3.017 s, no blank frames. This checks analysis plumbing only and is not Twitch evidence. Runtime latency aggregates mix offline/live cycles, so the published n=20 controlled OBS benchmark remains the latency comparison; it must not be relabelled a live-player result.
 
 The user stopped the primary stream. Both OBS instances were verified not streaming/not recording; the original primary clip and secondary profile/mutes/video settings were restored, temporary evidence sources removed, and normal npm run dev restarted without the process-only empty AI-key override. Data, movies and numeric receipts remain ignored under data/takes/qr-guard/. A further live proof requires a verified visible positive control first; “the QR never reaches the air” remains unsupported.
+
+
+### Transition-lock reproduction and repaired encoded-output check — 2026-11-02
+
+Consulted official OBS [confirmed issue11914](https://github.com/obsproject/obs-studio/issues/11914), [open repair PR14093](https://github.com/obsproject/obs-studio/pull/14093), and [obs-websocket source screenshot implementation](https://github.com/obsproject/obs-websocket/blob/master/src/requesthandler/RequestHandler_Sources.cpp). Source screenshots actively render the source; they are not encoded-program samples. The hypothesis was tested on local encoded output, independently of Twitch/Chrome.
+
+The original18 s offline unprotected recording was stuck in Privacy:0 QR/538 frames. Automation was disconnected. We then recovered the transition graph through a Studio Mode round-trip while outputs were stopped, preserved Studio Mode/preview, selected global Cut and cleared Main/Privacy overrides. The collection default is now Cut; no third-party patch/plugin or score change.
+
+| Direct encoded program, same TEST-ONLY motion input | Frames | QR-positive frames | Blank frames |
+|---|---:|---:|---:|
+| Before recovery, unprotected |538|0|0|
+| After recovery, unprotected |538|93|1|
+| After recovery, QR Guard active |539|0|1|
+| After recovery, one manual Dismiss then rearmed |539|31|1|
+
+All frames analyzed locally at640×360, actual encoded30fps/PTS from ffprobe, geometry only. Control positives2.500–3.500 s,8.500–9.500 s,14.500–15.500 s. Dismiss positives2.567–3.567 s, then subsequent QR cycles protected. Protected runtime:20 positive sensor observations,3 actual protection actions,0 capture failures. These are repeated frames from three appearances, not93 independent QR examples. Blank startup frames are explicitly counted, not interpreted as protection. No capture/model frames retained; requested private output recordings/derived TEST-ONLY review images remain in ignored data/.
+
+The new encoded acceptance option --expect-qr fails the old stuck recording; the recovered control and Dismiss supply positive controls. --expect-no-qr checks the protected take. This establishes finite local program-output behavior; a new actual Twitch player control remains required. The workaround and before/after evidence support the transition-lock diagnosis, without claiming every earlier transparent-image symptom has that same cause.
+
+After the transition repair, another20 real OBS moving-code actions at1280px/150ms measured detection-complete→confirmedPrivacy median10.45ms,p9511.38ms; capture-start→confirmedPrivacy median70.03ms,p9574.79ms. The nominal150ms phase +74.79ms path p95 +33.33ms video period is258.12ms versus500ms buffer: illustrative only, not a combined percentile/hard bound. Markers excluded offline. Prior benchmark retained separately under data/ before refreshing the current numeric report. Pixel-level program recordings above complement, rather than redefine, RPC latency. No pre-air Twitch claim yet.

@@ -1,5 +1,6 @@
 import OBSWebSocket from 'obs-websocket-js';
 import {PNG} from 'pngjs';
+import{prepareQrTransitions}from'./qr-transitions.ts';
 import{prepareQrLayout}from'./qr-layout.ts';
 import { parseVisionFrameWidth } from '../config.ts';
 
@@ -56,17 +57,14 @@ export class ObsClient {
       const main=await this.limit(this.wire.call('GetSourceFilterList',{sourceName:'Main'}));
       if(main.filters.some(filter=>filter.filterName!==own&&filter.filterEnabled&&filter.filterKind==='gpu_delay'))throw Error('Unmanaged Main delay');
       const existing=(main.filters as {filterName:string;filterKind:string;filterEnabled:boolean;filterSettings?:{delay_ms?:number}}[]).find(filter=>filter.filterName===own);
-      const transition=await this.limit(this.wire.call('GetSceneTransitionList'));
-      const cut=(transition.transitions as {transitionKind:string;transitionName:string}[]).find(value=>value.transitionKind==='cut_transition');if(!cut)throw Error('Cut transition missing');
-      const privacy=await this.limit(this.wire.call('GetSceneSceneTransitionOverride',{sceneName:this.config.privacyScene}));
+      await this.limit(prepareQrTransitions(this.wire,this.config.privacyScene));
       const configured=existing?.filterKind==='gpu_delay'&&existing.filterEnabled&&existing.filterSettings?.delay_ms===delayMs;
-      if(!configured||privacy.transitionName!==cut.transitionName){
+      if(!configured){
         const stream=await this.limit(this.wire.call('GetStreamStatus'));const record=await this.limit(this.wire.call('GetRecordStatus'));
         if(stream.outputActive||record.outputActive)throw Error('Prepare QR delay before streaming');
         if(existing&&existing.filterKind!=='gpu_delay')throw Error('QR filter collision');
         if(!existing)await this.limit(this.wire.call('CreateSourceFilter',{sourceName:'Main',filterName:own,filterKind:'gpu_delay',filterSettings:{delay_ms:delayMs}}));
         else{await this.limit(this.wire.call('SetSourceFilterSettings',{sourceName:'Main',filterName:own,filterSettings:{delay_ms:delayMs}}));await this.limit(this.wire.call('SetSourceFilterEnabled',{sourceName:'Main',filterName:own,filterEnabled:true}));}
-        await this.limit(this.wire.call('SetSceneSceneTransitionOverride',{sceneName:this.config.privacyScene,transitionName:cut.transitionName}));
       }
       await this.limit(prepareQrLayout(this.wire,this.config.privacyScene));
       const confirmed=await this.limit(this.wire.call('GetSourceFilter',{sourceName:'Main',filterName:own}));

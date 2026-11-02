@@ -73,3 +73,8 @@ Offline implementation does not establish the real-service definition of done. D
 - [x] Offline undelayed-source/Main comparison after streaming stopped:10 QR-positive samples each out of66 paired captures; captures RAM-only, original media restored afterwards. This is local composition evidence only.
 - [x] Cleanup verified: both OBS outputs stopped, primary Main contains no evidence source, original clip restored, secondary original profile/mutes/settings restored and recording-only profile removed. Normal npm run dev restored with real integrations.
 - [x] Regression for asynchronous StopRecord completion: wait until output inactive before permitting a following recording.164/164 tests, strict typecheck,lint181files and build pass.
+
+- [x] November2 follow-up reproduced failed positive control directly in encoded OBS program (0/538), independent of Twitch/Chrome. Official confirmed OBS transition-lock issue11914 matches the symptom; Studio Mode recovery plus global Cut/no Main/Privacy overrides repaired it.
+- [x] Encoded local control93/538 QR frames, protected0/539, one Dismiss31/539 with later cycles protected. One blank startup frame in each recovered take; not counted as evidence. Protected sensor20 positive samples/3 actions/0 unavailable. No desktop/audio capture, AI or Twitch calls in these offline trials.
+- [x] Repeated20 real OBS latency measurements after repair: detection→scene median10.45ms,p9511.38ms; capture→scene70.03ms,p9574.79ms. Defaults/scores unchanged.
+- [ ] Repeat actual Twitch player test after transition recovery, with an independently verified visible positive control; earlier live recordings remain inconclusive.

@@ -34,8 +34,8 @@ test('integrated QR pipeline withholds QR frames from AI and payload from API, S
   const wire={on(){},async connect(){},async disconnect(){},async call(name:string,data?:Record<string,unknown>){
     const layout=layoutReply(name,data);if(layout)return layout;
   if(name==='GetSourceFilterList')return {filters:data?.sourceName==='Main'?[{filterName:'Spotter QR Render Delay',filterKind:'gpu_delay',filterEnabled:true,filterSettings:{delay_ms:500}}]:[]};
-    if(name==='GetSceneTransitionList')return {transitions:[{transitionName:'Cut',transitionKind:'cut_transition'}]};
-    if(name==='GetSceneSceneTransitionOverride')return {transitionName:'Cut',transitionDuration:null};
+    if(name==='GetSceneTransitionList')return {currentSceneTransitionKind:'cut_transition',transitions:[{transitionName:'Cut',transitionKind:'cut_transition'}]};
+    if(name==='GetSceneSceneTransitionOverride')return {transitionName:null,transitionDuration:null};
     if(name==='GetSourceFilter')return {filterEnabled:true,filterSettings:{delay_ms:500}};
     if(name==='GetCurrentProgramScene')return {currentProgramSceneName:scene};
     if(name==='SetCurrentProgramScene'){scene=String(data?.sceneName);return {};}
@@ -58,8 +58,8 @@ test('OBS restoration preserves the continuously rendering delay buffer',async()
     calls.push(`${name}:${data?.sceneName??''}`);
     const layout=layoutReply(name,data);if(layout)return layout;
   if(name==='GetSourceFilterList')return {filters:data?.sourceName==='Main'?[{filterName:'Spotter QR Render Delay',filterKind:'gpu_delay',filterEnabled:true,filterSettings:{delay_ms:500}}]:[]};
-    if(name==='GetSceneTransitionList')return {transitions:[{transitionName:'Cut',transitionKind:'cut_transition'}]};
-    if(name==='GetSceneSceneTransitionOverride')return {transitionName:'Cut'};
+    if(name==='GetSceneTransitionList')return {currentSceneTransitionKind:'cut_transition',transitions:[{transitionName:'Cut',transitionKind:'cut_transition'}]};
+    if(name==='GetSceneSceneTransitionOverride')return {transitionName:null};
     if(name==='GetSourceFilter')return {filterEnabled:true,filterSettings:{delay_ms:500}};
     if(name==='GetCurrentProgramScene')return {currentProgramSceneName:scene};
     if(name==='SetCurrentProgramScene'){scene=String(data?.sceneName);return {};}
@@ -73,8 +73,8 @@ test('QR readiness rejects a transparent Main output even when its scene name an
  const wire={on(){},async connect(){},async disconnect(){},async call(name:string,data?:Record<string,unknown>){
   const layout=layoutReply(name,data);if(layout)return layout;
   if(name==='GetSourceFilterList')return{filters:data?.sourceName==='Main'?[{filterName:'Spotter QR Render Delay',filterKind:'gpu_delay',filterEnabled:true,filterSettings:{delay_ms:500}}]:[]};
-  if(name==='GetSceneTransitionList')return{transitions:[{transitionName:'Cut',transitionKind:'cut_transition'}]};
-  if(name==='GetSceneSceneTransitionOverride')return{transitionName:'Cut'};
+  if(name==='GetSceneTransitionList')return{currentSceneTransitionKind:'cut_transition',transitions:[{transitionName:'Cut',transitionKind:'cut_transition'}]};
+  if(name==='GetSceneSceneTransitionOverride')return{transitionName:null};
   if(name==='GetSourceFilter')return{filterEnabled:true,filterSettings:{delay_ms:500}};
   if(name==='GetCurrentProgramScene')return{currentProgramSceneName:'Main'};
   if(name==='GetSourceScreenshot')return{imageData:'data:image/png;base64,'+PNG.sync.write(blank).toString('base64')};
