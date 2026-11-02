@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**161 automated tests (161 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**163 automated tests (163 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -372,3 +372,5 @@ Detection development check:32/36 synthetic positives (6/6 encoded-motion sample
 The first Twitch trial created real markers but its positive control failed: Main rendered transparent and the player retained Privacy. Its zero QR counts are **inconclusive**. A fresh actual-player proof with a visibly successful benign Dismiss control remains pending. No claim that QR never reached the air is made. A safety net, not a guarantee.
 
 Commands: `qr:setup`, `qr:fixtures` (`-- --moving` for motion), `qr:eval`, `qr:benchmark -- --moving --trials 20`. Local supplied-video screening: `node --experimental-strip-types scripts/qr-scan-video.ts "qr videos/example.mp4" 1280` (or1920). Videos/numeric evidence remain ignored under data/ or qr videos/; captured frames never go to disk. See [EVAL](docs/EVAL.md) and [QR investigation/setup](docs/QR_GUARD.md) for methodology, failures and limits.
+
+Evidence recording uses a fresh blank **LOCAL RECORDING ONLY** profile on secondary OBS4456, without duplicating Twitch settings or reading service credentials. It requires that profile and muted audio inputs before recording, preserves the prior profile/mutes/settings for restoration, and never starts a stream. The primary OBS alone is used for the public clip/Privacy proof.
