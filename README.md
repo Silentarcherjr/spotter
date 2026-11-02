@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**163 automated tests (163 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**164 automated tests (164 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -369,7 +369,7 @@ The color probe observed an unfiltered-source lead of407–476ms (n8, polling un
 
 Detection development check:32/36 synthetic positives (6/6 encoded-motion samples),0/24 no-obvious-QR IRL detections. Four tiny/rotated36–48px cases were missed. Cases informed tuning; this is not an unseen holdout. Two supplied4K videos also produced local detections;1920px improved counts at more than twice the detector cost, so defaults remain unchanged. These unlabelled counts are not recall.
 
-The first Twitch trial created real markers but its positive control failed: Main rendered transparent and the player retained Privacy. Its zero QR counts are **inconclusive**. A fresh actual-player proof with a visibly successful benign Dismiss control remains pending. No claim that QR never reached the air is made. A safety net, not a guarantee.
+The first Twitch trial created real markers but its positive control failed: Main rendered transparent and the player retained Privacy. A second trial on November 2 created real markers and recorded visible Main/Privacy transitions, but both the protected take (5,443 frames) and Dismiss/rearmed take (6,159 frames) contained zero detected QR codes. The positive control therefore remains unvalidated; these counts are **inconclusive**, not evidence of prevention. An offline source/Main comparison subsequently detected the known QR in both (10 positive samples each out of 66), which does not establish viewer pixels. A successful visible Twitch positive control remains required. No claim that QR never reached the air is made. A safety net, not a guarantee.
 
 Commands: `qr:setup`, `qr:fixtures` (`-- --moving` for motion), `qr:eval`, `qr:benchmark -- --moving --trials 20`. Local supplied-video screening: `node --experimental-strip-types scripts/qr-scan-video.ts "qr videos/example.mp4" 1280` (or1920). Videos/numeric evidence remain ignored under data/ or qr videos/; captured frames never go to disk. See [EVAL](docs/EVAL.md) and [QR investigation/setup](docs/QR_GUARD.md) for methodology, failures and limits.
 

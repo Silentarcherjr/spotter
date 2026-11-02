@@ -27,3 +27,7 @@ test('private recording uses a fresh blank profile and restores the prior profil
  const state=await qrRecorder('ws://localhost:4456','','prepare','/tmp/evidence',undefined,wire,async()=>{assert.equal(profile,'Original companion');persisted=true;});assert.ok(persisted);assert.ok(state&&'scene'in state);assert.match(profile,/^Spotter LOCAL RECORDING ONLY /);assert.equal(muted,true);assert.ok(calls.some(c=>c.name==='CreateProfile'));assert.ok(!calls.some(c=>/StreamServiceSettings|DuplicateProfile|StartStream/.test(c.name)));
  await qrRecorder('ws://localhost:4456','','restore','/tmp/evidence',state,wire);assert.equal(profile,'Original companion');assert.equal(muted,false);
 });
+test('record stop waits for actual inactive output before returning a file for rename/restoration',async()=>{
+ let reads=0;let stopping=false;const wire={async connect(){},async disconnect(){},async call(name:string){if(name==='GetStreamStatus')return{outputActive:false};if(name==='GetRecordStatus'){reads++;return{outputActive:!stopping||reads<3};}if(name==='StopRecord'){stopping=true;return{outputPath:'/tmp/local.mov'};}throw Error('Unexpected request');}}as unknown as SetupWire;
+ const result=await qrRecorder('ws://localhost:4456','','stop','/tmp',undefined,wire);assert.ok(reads>=3);assert.deepEqual(result,{path:'/tmp/local.mov'});
+});

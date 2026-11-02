@@ -8,7 +8,7 @@ export async function qrRecorder(url:string,password:string,mode:'prepare'|'star
   try{
     if((await wire.call('GetStreamStatus')).outputActive)throw Error('Secondary recorder must not stream');
     const recording=(await wire.call('GetRecordStatus')).outputActive;
-    if(mode==='stop'){if(!recording)throw Error('Recorder not recording');return {path:(await wire.call('StopRecord')).outputPath};}
+    if(mode==='stop'){if(!recording)throw Error('Recorder not recording');const path=(await wire.call('StopRecord')).outputPath;for(let i=0;i<100;i++){if(!(await wire.call('GetRecordStatus')).outputActive)return{path};await new Promise(r=>setTimeout(r,50));}throw Error('Recorder shutdown pending');}
     if(recording)throw Error('Recorder already active');
     if(mode==='start'){
       const {imageData}=await wire.call('GetSourceScreenshot',{sourceName:sceneName,imageFormat:'png',imageWidth:320});

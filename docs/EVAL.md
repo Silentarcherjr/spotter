@@ -122,3 +122,21 @@ Two user-provided4K videos were scanned locally at5fps, at1280px and1920px width
 |15329614 (7.58s)|301bb3fe86364abee84544bc3567df590860e3d1b4f635bfc33fe92a8ba741de|38|9|13|62.05/76.63ms|137.20/155.59ms|
 
 All four runs had0unavailable. First detected boxes were approximately65×61px and73×71px at1280; these are small targets.1920px detection cost more than doubles and excludes screenshot cost, so its current coverage gain is insufficient evidence to change the default fast-loop width/interval. At1280, detections include2.0/8.4/9.0/9.2s in the first clip and0.0/0.2/4.0/5.0/5.6/6.0/6.2/6.4/6.6s in the second (nominal sample times). Source provenance/license was not independently verified; no distribution of these files is made.
+
+
+### Second Twitch QR trial — 2026-11-02, still inconclusive
+
+Only the primary OBS streamed the known silent TEST-ONLY motion clip. The secondary recorded locally under a fresh blank LOCAL RECORDING ONLY profile, with all its audio inputs muted; it never streamed. Real Twitch live status and automatic marker receipts were observed (including stream positions 80–110 s in the protected monitor and 212–272 s in the later monitor). Marker receipts confirm integration, not visibility or prevention.
+
+| Local recording of actual dashboard + Twitch player | Decoded frames | Geometric QR detections | Unavailable / blank player frames | Fixture-blue Main-like frames |
+|---|---:|---:|---:|---:|
+| Protected, qr-proof-live-protected-20261102.mov | 5,443 | 0 | 0 / 0 | 2,593 |
+| Dismiss control + rearmed, qr-proof-live-control-rearmed-20261102.mov | 6,159 | 0 | 0 / 0 | 672 |
+
+Analysis used every decoded frame and actual ffprobe presentation timestamps, cropping the player in RAM. Main-like is a fixture-specific blue pixel sanity check, not a QR or freshness classifier. No QR payload decoder was used. Zero detections in the positive control invalidate a prevention claim; these movies are diagnostic evidence only. Reviewing the archived Twitch VOD near the marker/control interval likewise did not establish a visibly successful QR control. No end-to-end viewer exposure window can honestly be measured from this trial.
+
+A subsequent offline check, with QR automation disconnected, temporarily played the same clip in Main and compared undelayed-child/Main captures at 1280 px: 66 paired samples over approximately 12.5 s, 10 QR-positive samples in each path. It restored the original media afterwards. This establishes that the local scene can render the code when sampled, not that the streamed control did so. An additional exploratory Dismiss run is not counted as validation because it could start from retained guard state. The cause of the failed Twitch control remains unresolved; no graphics, player or timing explanation is asserted as proven.
+
+An independently generated 6 s composition validated the recording analyzer: 360 decoded frames, 62 detections from 2.000–3.017 s, no blank frames. This checks analysis plumbing only and is not Twitch evidence. Runtime latency aggregates mix offline/live cycles, so the published n=20 controlled OBS benchmark remains the latency comparison; it must not be relabelled a live-player result.
+
+The user stopped the primary stream. Both OBS instances were verified not streaming/not recording; the original primary clip and secondary profile/mutes/video settings were restored, temporary evidence sources removed, and normal npm run dev restarted without the process-only empty AI-key override. Data, movies and numeric receipts remain ignored under data/takes/qr-guard/. A further live proof requires a verified visible positive control first; “the QR never reaches the air” remains unsupported.
