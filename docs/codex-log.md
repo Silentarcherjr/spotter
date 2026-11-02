@@ -400,3 +400,7 @@
 - User started primary only; real Twitch live status and QR stream markers confirmed. Secondary used the blank local recording-only profile and muted audio. Player initially required an explicit Play click; its warm-up movie is excluded. A continuous local dashboard/player movie and numeric phase timestamps were retained in ignored data/takes/qr-guard/.
 - Preliminary local review at 2 fps: QR geometry appeared in 2/160 samples of the control/rearmed interval (movie seconds60–60.5), after the authorized Dismiss; an earlier protected sample had 0/90 detections and no blank player frames. This is sampled evidence only, not an all-frame prevention guarantee. Full-frame analysis remains pending. No QR content decoded, no detector frames saved or AI used.
 - On continuation both streams and recordings were already stopped. Restored primary original clip/scene and secondary original profile/mutes/settings, removed temporary recorder scene, and restarted normal npm run dev without the temporary AI-key override. No credentials read or shown. Prior phase validation was168 tests, typecheck, lint and build passing.
+
+## 2026-11-02 — Complete QR take analysis
+
+- Reused qr:analyze-take offline on the existing private Twitch player recording: 13,110 frames; 62 detections, all at 59.967–60.983 s in the Dismiss control, zero outside that interval; no unavailable/blank frames. Frame duplication and possible detector/sampling misses prevent a universal guarantee. Updated README and EVAL; no live services contacted.
