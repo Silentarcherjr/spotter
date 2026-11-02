@@ -42,6 +42,12 @@ export class ObsClient {
     const result = await this.limit(this.wire.call('GetSourceScreenshot', { sourceName: scene, imageFormat: 'jpg', imageWidth: this.config.frameWidth! }));
     return result.imageData.replace(/^data:image\/jpg;base64,/, 'data:image/jpeg;base64,');
   }
+  async capturePng(sourceName: string, width = 1280): Promise<Buffer> {
+    this.ready();
+    const result=await this.limit(this.wire.call('GetSourceScreenshot',{sourceName,imageFormat:'png',imageWidth:parseVisionFrameWidth(width)}));
+    if(!result.imageData.startsWith('data:image/png;base64,'))throw Error('OBS PNG unavailable');
+    return Buffer.from(result.imageData.slice(result.imageData.indexOf(',')+1),'base64');
+  }
   async applyPrivacy(): Promise<void> {
     this.ready();
     if (this.config.source && this.config.blurFilter) {

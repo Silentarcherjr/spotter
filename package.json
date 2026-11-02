@@ -30,12 +30,15 @@
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",
+    "@zxing/library": "^0.23.0",
     "fastify": "^5.12.7",
     "obs-websocket-js": "^5.0.8",
-    "pitchy": "^4.1.0"
+    "pitchy": "^4.1.0",
+    "pngjs": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/pngjs": "^6.0.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"
   }
