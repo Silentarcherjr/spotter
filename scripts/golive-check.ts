@@ -1,3 +1,4 @@
+import { prestreamExitCode } from '../src/core/prestream.ts';
 const port = Number(process.env.PORT ?? 3210);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw Error('Invalid port');
 try {
@@ -11,10 +12,11 @@ try {
     findings: string[];
     simulated?: boolean;
   };
-  console.log(`${data.level.toUpperCase()}${data.simulated ? ' · SIMULATED' : ''}`);
+  const level = typeof data.level === 'string' ? data.level : 'unknown';
+  console.log(`${level.toUpperCase()}${data.simulated ? ' · SIMULATED' : ''}`);
   for (const finding of data.findings) console.log(`- ${finding}`);
-  if (data.level !== 'green') process.exitCode = 1;
+  process.exitCode = prestreamExitCode(level);
 } catch {
   console.log('AMBER\n- analysis unavailable');
-  process.exitCode = 1;
+  process.exitCode = 0;
 }

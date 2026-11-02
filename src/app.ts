@@ -1,3 +1,4 @@
+import { parsePrestreamConfidence } from './core/prestream.ts';
 import { runPrestream } from './modules/prestream.ts';
 import { parseQrConfig } from './core/qr.ts';
 import type { QrConfig } from './core/qr.ts';
@@ -48,6 +49,8 @@ export function createApp(options: {
   obs?: ObsConfig;
   obsWire?: ObsWire;
   ai?: AIConfig;
+  prestreamModel?: string;
+  prestreamConfidence?: number;
   crew?: readonly CrewPeer[];
   crewToken?: string;
   energyAlertThreshold?: number;
@@ -135,6 +138,16 @@ export function createApp(options: {
   const obs =
     !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
   const ai = !options.simulated && options.ai ? new ResponsesAI(options.ai) : null;
+  const prestreamAi =
+    !options.simulated && options.ai
+      ? new ResponsesAI({
+          ...options.ai,
+          model: options.prestreamModel?.trim() || options.ai.model,
+        })
+      : null;
+  const prestreamConfidence = parsePrestreamConfidence(
+    options.prestreamConfidence === undefined ? undefined : String(options.prestreamConfidence),
+  );
   const qrConfig = options.qr ?? parseQrConfig({});
   const privacy = obs
     ? new PrivacyCoordinator({ protect: () => obs.applyPrivacy(), restore: () => obs.restore() })
@@ -352,11 +365,12 @@ export function createApp(options: {
         capture: (scene) => obs.capturePng(scene),
         detect: detectQr,
         vision: (image) => {
-          if (!ai) throw Error('Unavailable');
-          return ai.prestreamVision(image);
+          if (!prestreamAi) throw Error('Unavailable');
+          return prestreamAi.prestreamVision(image);
         },
       },
       qrConfig.enabled,
+      prestreamConfidence,
     );
     return { ...result, simulated: options.simulated };
   });

@@ -101,7 +101,7 @@ test('pre-stream vision schema includes generic objects without location fields'
         },
       ],
     }),
-    ['Readable document'],
+    [{ description: 'Readable document', confidence: 0.8 }],
   );
 });
 test('pre-stream fails soft on missing observation and never sends QR frames to AI', async () => {
@@ -229,6 +229,105 @@ test('private pre-stream endpoint fails soft in demo without contacting integrat
     assert.equal(response.json().level, 'amber');
     assert.equal(response.json().simulated, true);
     assert.ok(response.json().findings.includes('analysis unavailable'));
+  } finally {
+    await app.close();
+  }
+});
+test('confidence threshold includes the boundary and amber permits a reviewed start', async () => {
+  const { filterPrestreamClues, prestreamExitCode, parsePrestreamConfidence } =
+    await import('../src/core/prestream.ts');
+  const clues = [
+    { description: 'Low', confidence: 0.7999 },
+    { description: 'Boundary', confidence: 0.8 },
+    { description: 'High', confidence: 0.9 },
+  ];
+  assert.deepEqual(filterPrestreamClues(clues, 0.8), ['Boundary', 'High']);
+  assert.deepEqual(filterPrestreamClues(clues, 0.9), ['High']);
+  assert.equal(parsePrestreamConfidence(undefined), 0.8);
+  assert.throws(() => parsePrestreamConfidence('1.01'));
+  assert.equal(prestreamExitCode('amber'), 0);
+  assert.equal(prestreamExitCode('green'), 0);
+  assert.equal(prestreamExitCode('red'), 1);
+  assert.equal(prestreamExitCode('unknown'), 1);
+});
+test('pre-stream model is isolated from Off the Map and threshold controls output', async () => {
+  const { createApp } = await import('../src/app.ts');
+  const { PNG } = await import('pngjs');
+  const png = new PNG({ width: 32, height: 18 });
+  png.data.fill(255);
+  const models: string[] = [];
+  const wire = {
+    on() {},
+    async connect() {},
+    async disconnect() {},
+    async call(n: string) {
+      if (n === 'GetSceneList')
+        return {
+          scenes: [{ sceneName: 'Main' }, { sceneName: 'Privacy' }],
+          currentProgramSceneName: 'Main',
+        };
+      if (n === 'GetSceneItemList') return { sceneItems: [] };
+      if (n === 'GetInputList') return { inputs: [] };
+      if (n === 'GetCurrentSceneTransition') return { transitionKind: 'cut_transition' };
+      if (n === 'GetSpecialInputs') return {};
+      if (n === 'GetSourceScreenshot')
+        return { imageData: 'data:image/png;base64,' + PNG.sync.write(png).toString('base64') };
+      throw Error(n);
+    },
+  };
+  const fetcher: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    models.push(body.model);
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        output: [
+          {
+            type: 'message',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  clues: [
+                    {
+                      category: 'readable_document',
+                      description: 'Readable document',
+                      severity: 3,
+                      confidence: 0.79,
+                    },
+                    {
+                      category: 'package_label',
+                      description: 'Mail or package label',
+                      severity: 3,
+                      confidence: 0.8,
+                    },
+                  ],
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+      { status: 200 },
+    );
+  };
+  const { parseQrConfig } = await import('../src/core/qr.ts');
+  const app = createApp({
+    databasePath: ':memory:',
+    simulated: false,
+    qr: parseQrConfig({ QR_GUARD: '0' }),
+    obs: { url: 'ws://mock', password: '', privacyScene: 'Privacy' },
+    obsWire: wire as never,
+    ai: { key: 'fake', model: 'original', fetcher },
+    prestreamModel: 'different',
+    prestreamConfidence: 0.8,
+  });
+  try {
+    await app.ready();
+    const response = await app.inject({ method: 'POST', url: '/api/prestream' });
+    assert.equal(response.json().level, 'amber');
+    assert.deepEqual(response.json().findings, ['Mail or package label']);
+    assert.deepEqual(models, ['different']);
   } finally {
     await app.close();
   }

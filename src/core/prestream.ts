@@ -32,3 +32,25 @@ export function evaluatePrestream(input: PrestreamInput): {
     findings: [...red, ...amber],
   };
 }
+
+export const DEFAULT_PRESTREAM_CONFIDENCE = 0.8;
+export function parsePrestreamConfidence(value: string | undefined): number {
+  const n = value === undefined || value === '' ? DEFAULT_PRESTREAM_CONFIDENCE : Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1) throw Error('Invalid PRESTREAM_CONFIDENCE');
+  return n;
+}
+export function filterPrestreamClues(
+  clues: readonly { description: string; confidence: number }[],
+  minimum: number,
+): string[] {
+  if (!Number.isFinite(minimum) || minimum < 0 || minimum > 1) throw Error('Invalid confidence');
+  return clues
+    .filter(
+      (clue) =>
+        Number.isFinite(clue.confidence) && clue.confidence >= minimum && clue.confidence <= 1,
+    )
+    .map((clue) => clue.description);
+}
+export function prestreamExitCode(level: string): number {
+  return level === 'green' || level === 'amber' ? 0 : 1;
+}

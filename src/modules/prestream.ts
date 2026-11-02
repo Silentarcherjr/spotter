@@ -1,4 +1,8 @@
-import { evaluatePrestream } from '../core/prestream.ts';
+import {
+  evaluatePrestream,
+  filterPrestreamClues,
+  DEFAULT_PRESTREAM_CONFIDENCE,
+} from '../core/prestream.ts';
 import type { PrestreamInput } from '../core/prestream.ts';
 type Configuration = Omit<
   PrestreamInput,
@@ -9,9 +13,10 @@ export async function runPrestream(
     inspect: () => Promise<Configuration>;
     capture: (scene: string) => Promise<Buffer>;
     detect: (image: Buffer) => { detected: boolean };
-    vision: (image: string) => Promise<string[]>;
+    vision: (image: string) => Promise<{ description: string; confidence: number }[]>;
   },
   qrEnabled: boolean,
+  minimumConfidence = DEFAULT_PRESTREAM_CONFIDENCE,
 ) {
   let config: Configuration;
   try {
@@ -35,7 +40,10 @@ export async function runPrestream(
     } catch {}
     if (qrAvailable && !qrDetected) {
       try {
-        clues = await deps.vision(`data:image/png;base64,${image.toString('base64')}`);
+        clues = filterPrestreamClues(
+          await deps.vision(`data:image/png;base64,${image.toString('base64')}`),
+          minimumConfidence,
+        );
         visionAvailable = true;
       } catch {}
     }

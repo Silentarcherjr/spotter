@@ -164,3 +164,16 @@ After the transition repair, another20 real OBS moving-code actions at1280px/150
 ### Repaired Twitch recording: complete frame analysis
 
 `qr:analyze-take` inspected all **13,110 recorded frames at 60 fps** of the private dashboard/player movie. The geometric detector found **62 frames**, all between **59.967 and 60.983 seconds**, during the intentional Dismiss control; outside that interval it found none. No blank or unavailable player frames were reported. Frames may be duplicated and are not independent observations; detector misses and visibility between sensor samples remain possible. The recorded player has delivery delay and the test uses a known synthetic code, so this is evidence for the observed test, not a universal guarantee or a precise exposure bound. The movie and timestamps stay in ignored `data/`.
+
+## Pre-stream model comparison — 2026-11-02
+
+Compared the configured `openai/gpt-4.1-mini` with [OpenRouter's `openai/gpt-6.1-terra`](https://openrouter.ai/openai/gpt-6.1-terra) on exactly the same inputs, 1280 px, high detail, strict pre-stream schema and confidence ≥0.8. Inputs: three repetitions of the same synthetic uniform image, three authored synthetic clean frames (01, 05, 10), and six previously frozen, author-labelled Pexels frames: `n-3647789-{00,08,16}` and `n-37063950-{00,02,04}`. Existing source and encoded-frame hashes were verified before inference. Original pixels were held in memory; only generic numeric/label observations were saved under ignored `data/takes/final/`.
+
+| Model | Uniform false positives | Clean-frame false positives | Natural matching labelled clues | Natural frames with matching clue | Unavailable natural frames |
+|---|---:|---:|---:|---:|---:|
+| GPT-4.1 mini | 3/3 | 3/3 | 4/6 available labels | 3/4 available | 2/6 invalid observation |
+| GPT-6.1 Terra | 0/3 | 0/3 | 7/8 | 6/6 | 0/6 |
+
+For each natural frame where mini produced valid observations, Terra detected every labelled category mini detected; Terra also detected landmarks in the other frames. Thus Terra met the requested adoption criterion on this sample and is configured **only** as `PRESTREAM_MODEL` locally. Off the Map retains `OPENAI_MODEL`. `PRESTREAM_MODEL` is optional and defaults to the existing model on other installations. Model confidence is self-reported, not a calibrated probability.
+
+These are single runs, three repeated identical uniform inputs and correlated frames from only two videos; clean and natural labels are author judgments, not independent adjudication. Two mini outputs were unavailable and excluded rather than counted as misses. This small comparison is not a general false-positive/recall estimate or a guarantee; provider routing and model output can vary. The Pexels sources and freeze manifest are documented in the temporal evaluation above.

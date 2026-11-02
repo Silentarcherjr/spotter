@@ -134,7 +134,7 @@ export class ResponsesAI {
       throw new AnalysisUnavailableError('invalid_observation');
     }
   }
-  async prestreamVision(image: string): Promise<string[]> {
+  async prestreamVision(image: string): Promise<{ description: string; confidence: number }[]> {
     if (!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(image) || image.length > 2_800_000)
       throw new Error('Invalid in-memory frame');
     const result = await this.observe(

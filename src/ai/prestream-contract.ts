@@ -21,7 +21,9 @@ export const prestreamSchema = {
     },
   },
 } as const;
-export function parsePrestreamVision(value: unknown): string[] {
+export function parsePrestreamVision(
+  value: unknown,
+): { description: string; confidence: number }[] {
   if (
     !value ||
     typeof value !== 'object' ||
@@ -55,6 +57,6 @@ export function parsePrestreamVision(value: unknown): string[] {
       c.confidence > 1
     )
       throw Error('Invalid observation');
-    return c.description;
+    return { description: c.description, confidence: c.confidence };
   });
 }

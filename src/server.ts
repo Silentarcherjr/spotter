@@ -1,3 +1,4 @@
+import { parsePrestreamConfidence } from './core/prestream.ts';
 import { parseQrConfig } from './core/qr.ts';
 import { mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -54,6 +55,8 @@ const crew = process.env.CREW_FILE
   ? parseCrewConfig(JSON.parse(await readFile(process.env.CREW_FILE, 'utf8')) as unknown)
   : [];
 const app = createApp({
+  ...(process.env.PRESTREAM_MODEL ? { prestreamModel: process.env.PRESTREAM_MODEL } : {}),
+  prestreamConfidence: parsePrestreamConfidence(process.env.PRESTREAM_CONFIDENCE),
   qr: parseQrConfig(process.env),
   chatAutoDelete: parseChatAutoDelete(process.env.CHAT_AUTO_DELETE),
   visionCaptureIntervalMs: parseVisionCaptureIntervalMs(process.env.VISION_CAPTURE_INTERVAL_MS),

@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**176 automated tests (176 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**178 automated tests (178 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -387,6 +387,10 @@ The repaired Twitch take was analyzed at its recorded 60 fps: **13,110 frames**,
 
 ## Pre-stream check
 
-With `npm run dev` running, press **Re-check** in the private dashboard or run `npm run golive:check`. The result is red for unsafe capture sources, dashboard/API browser sources or a missing Privacy scene; amber for enabled desktop audio, a non-Cut transition or missing Render Delay when QR Guard is enabled, generic visual clues, QR, or unavailable analysis; green means no obvious issues were detected. It is a safety net, not a guarantee.
+With `npm run dev` running, press **Re-check** in the private dashboard or run `npm run golive:check`. The result is red for unsafe capture sources, dashboard/API browser sources or a missing Privacy scene; amber for enabled desktop audio, a non-Cut transition or missing Render Delay when QR Guard is enabled, generic visual clues at or above PRESTREAM_CONFIDENCE (default 0.8), QR, or unavailable analysis; green means no obvious issues were detected. It is a safety net, not a guarantee.
 
-The inspection uses read-only OBS calls and traverses enabled scenes and groups; it never reads stream service settings. A program frame is inspected in memory by the existing vision adapter with a separate extended generic schema and the local QR detector. If a QR is detected or its detection fails, the image is withheld from AI and vision is reported unavailable. No image is saved, QR content decoded or stream started/stopped. SIM mode reports unavailable with SIMULATED, never fabricated green. The command uses the running local API and returns a nonzero exit status for red, amber or unavailable.
+The inspection uses read-only OBS calls and traverses enabled scenes and groups; it never reads stream service settings. A program frame is inspected in memory by the existing vision adapter with a separate extended generic schema and the local QR detector. If a QR is detected or its detection fails, the image is withheld from AI and vision is reported unavailable. No image is saved, QR content decoded or stream started/stopped. SIM mode reports unavailable with SIMULATED, never fabricated green. The command uses the running local API and returns a nonzero exit status for red. Amber permits the streamer to proceed after reviewing each finding, including unavailable analysis; green means nothing was flagged, not a guarantee. Unknown result values fail closed.
+
+`PRESTREAM_MODEL` optionally selects a model only for the pre-stream check; empty defaults to `OPENAI_MODEL`. Off the Map continues using `OPENAI_MODEL`. `PRESTREAM_CONFIDENCE` controls the minimum displayed model confidence (default 0.8, inclusive).
+
+For the current local setup, `PRESTREAM_MODEL=openai/gpt-6.1-terra` was selected from the small documented comparison in [EVAL](docs/EVAL.md); this does not alter Off the Map.
