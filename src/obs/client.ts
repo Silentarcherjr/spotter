@@ -1,5 +1,6 @@
 import OBSWebSocket from 'obs-websocket-js';
 import {PNG} from 'pngjs';
+import{inspectPrestream}from'./prestream.ts';
 import{prepareQrTransitions}from'./qr-transitions.ts';
 import{prepareQrLayout}from'./qr-layout.ts';
 import { parseVisionFrameWidth } from '../config.ts';
@@ -80,6 +81,7 @@ export class ObsClient {
     };
     this.qrPreparing=run();try{await this.qrPreparing;}finally{this.qrPreparing=null;}
   }
+  async inspectPrestream(qrEnabled:boolean){this.ready();return this.limit(inspectPrestream(this.wire,qrEnabled));}
   async captureVisionPng():Promise<Buffer>{
     this.ready();const source=this.config.source??(await this.limit(this.wire.call('GetCurrentProgramScene'))).currentProgramSceneName;
     return this.capturePng(source,this.config.frameWidth);

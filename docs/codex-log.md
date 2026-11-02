@@ -404,3 +404,14 @@
 ## 2026-11-02 — Complete QR take analysis
 
 - Reused qr:analyze-take offline on the existing private Twitch player recording: 13,110 frames; 62 detections, all at 59.967–60.983 s in the Dismiss control, zero outside that interval; no unavailable/blank frames. Frame duplication and possible detector/sampling misses prevent a universal guarantee. Updated README and EVAL; no live services contacted.
+
+## 2026-11-02 — Pre-stream check work in progress
+
+- Offline only: added an initial pure red/amber/green evaluator, a read-only recursive OBS inspection adapter and three mock-based tests. These files are not wired into the app or CLI and need further coverage and review before use. No OBS or Twitch connection was made during this work. The vision/QR integration, dashboard, CLI, categories and final test plan remain outstanding.
+- Current validation: 171 tests pass, typecheck, lint and build pass. This is not a completed pre-stream check.
+
+## 2026-11-02 — Pre-stream check construction
+
+- Completed the offline-tested pre-stream check: pure red/amber/green decisions; recursive read-only OBS scene/group inspection of enabled inputs; capture and private-browser alerts; desktop-audio, Cut and Render Delay warnings. Missing inspection/vision/QR data never returns green. Scene and source URLs are not exposed by the result. Existing score and thresholds remain unchanged.
+- Added a separate extension of the existing structured vision contract for generic readable documents, package labels and street-view windows; validation permits no literal text/location. QR detection is local and frames with detected QR or failed QR detection are withheld from AI. Frames stay in memory. Added private POST API, dashboard Re-check panel and golive:check CLI; demo explicitly reports unavailable/SIMULATED.
+- Tests first for evaluator, schema, mocked OBS recursion/groups/disabled sources/capture kinds/desktop audio, fail-soft QR and mock endpoint. No real OBS or Twitch used in this construction; stopped the real development server left over from the previous session. 176/176 tests, typecheck, lint193 files and build pass. Files: src/core/prestream.ts, src/obs/prestream.ts and client.ts, src/ai/prestream-contract.ts and responses.ts, src/modules/prestream.ts, src/app.ts, shared/shell.ts and style.css, scripts/golive-check.ts, package.json, test/golive.test.ts, README.

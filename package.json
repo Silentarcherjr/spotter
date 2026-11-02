@@ -35,7 +35,8 @@
     "qr:recorder": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-recorder.ts",
     "qr:setup": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-setup.ts",
     "qr:program-proof": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-program-proof.ts",
-    "qr:analyze-take": "node --experimental-strip-types scripts/qr-analyze-take.ts"
+    "qr:analyze-take": "node --experimental-strip-types scripts/qr-analyze-take.ts",
+    "golive:check": "node --experimental-strip-types --env-file-if-exists=.env scripts/golive-check.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

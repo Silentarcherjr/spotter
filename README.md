@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**168 automated tests (168 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**176 automated tests (176 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -383,3 +383,10 @@ The same 18 s known-input recordings then yielded: unprotected control **93/538 
 Reproduce offline with `npm run qr:program-proof -- control --leave-disconnected` (or `protected` / `dismiss`), then `npm run qr:analyze-take -- data/takes/qr-guard/program-control-20261102.mov --program --expect-qr`; use `--expect-no-qr` for protected output. The helper records only known TEST-ONLY media/public overlay on primary OBS under a fresh blank profile with muted audio, never starts streaming, checkpoints restoration metadata in ignored data/, then restores the prior profile/video/mutes/media. It never records a desktop. Captured detector frames remain RAM-only; these explicitly requested output-evidence movies are private local artifacts.
 
 The repaired Twitch take was analyzed at its recorded 60 fps: **13,110 frames**, with **62 QR-positive frames exclusively at 59.967–60.983 s**, during the intentional Dismiss control. No QR was detected in the remaining recorded frames. This finite test supports protection for this synthetic moving QR; detector misses, sampling gaps, playback latency, and other sizes or conditions remain possible. It is not a guarantee.
+
+
+## Pre-stream check
+
+With `npm run dev` running, press **Re-check** in the private dashboard or run `npm run golive:check`. The result is red for unsafe capture sources, dashboard/API browser sources or a missing Privacy scene; amber for enabled desktop audio, a non-Cut transition or missing Render Delay when QR Guard is enabled, generic visual clues, QR, or unavailable analysis; green means no obvious issues were detected. It is a safety net, not a guarantee.
+
+The inspection uses read-only OBS calls and traverses enabled scenes and groups; it never reads stream service settings. A program frame is inspected in memory by the existing vision adapter with a separate extended generic schema and the local QR detector. If a QR is detected or its detection fails, the image is withheld from AI and vision is reported unavailable. No image is saved, QR content decoded or stream started/stopped. SIM mode reports unavailable with SIMULATED, never fabricated green. The command uses the running local API and returns a nonzero exit status for red, amber or unavailable.

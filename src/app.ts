@@ -1,3 +1,4 @@
+import{runPrestream}from'./modules/prestream.ts';
 import {parseQrConfig} from './core/qr.ts';
 import type {QrConfig} from './core/qr.ts';
 import {PrivacyCoordinator} from './modules/privacy.ts';
@@ -130,6 +131,11 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
   });
   app.get('/api/review/takes', async () => (await takes).map(({ id, label, simulated, points }) => ({ id, label, simulated, samples: points.length })));
   app.get<{ Params: { id: string } }>('/api/review/takes/:id', async (request, reply) => { const take = (await takes).find(take => take.id === request.params.id); return take ?? reply.code(404).send({ error: 'Take unavailable' }); });
+  app.post('/api/prestream',async()=>{
+    if(!obs)return {level:'amber',findings:['OBS inspection unavailable','analysis unavailable'],simulated:options.simulated};
+    const result=await runPrestream({inspect:()=>obs.inspectPrestream(qrConfig.enabled),capture:(scene)=>obs.capturePng(scene),detect:detectQr,vision:(image)=>{if(!ai)throw Error('Unavailable');return ai.prestreamVision(image);}},qrConfig.enabled);
+    return {...result,simulated:options.simulated};
+  });
   app.get('/api/qr',async()=>qr?.snapshot()??{enabled:false,status:options.simulated?'disabled':'unavailable'});
   app.post('/api/qr/dismiss',async(_request,reply)=>{if(!qr)return reply.code(503).send({error:'QR Guard unavailable'});try{await qr.dismiss();return {dismissed:true};}catch{return reply.code(503).send({error:'QR Guard unavailable'});}});
   app.get('/api/latency', async () => ({ simulated: options.simulated, captureIntervalMs: visionCaptureIntervalMs, endpoint: 'OBS program confirmation; excludes player/encoder/network', live: offthemap?.latency() ?? null, benchmark: readLatencyBenchmark() }));

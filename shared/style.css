@@ -166,3 +166,10 @@ body.recording .chips-title { padding-top: 1px; }
 #qr-indicator[data-state="armed"] { color: #c5ff6b; }
 #qr-indicator[data-state="triggered"] { color: #e1b6ff; border-color: #ab7dde; }
 #qr-indicator[data-state="unavailable"] { color: #ffcb80; }
+
+#prestream-panel { display: flex; align-items: center; gap: 16px; padding: 12px 18px; margin-bottom: 12px; }
+#prestream-panel p { flex: 1; margin: 0; }
+#prestream-panel[data-level="red"] #prestream-level { color: #ffb0a8; border-color: #ff746c; }
+#prestream-panel[data-level="amber"] #prestream-level { color: #ffdc88; border-color: #e3aa35; }
+#prestream-panel[data-level="green"] #prestream-level { color: #c5ff6b; border-color: #9ee351; }
+body.recording #prestream-panel { padding: 6px 12px; margin-bottom: 6px; }
