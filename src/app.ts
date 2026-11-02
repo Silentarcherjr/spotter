@@ -1,3 +1,9 @@
+import {parseQrConfig} from './core/qr.ts';
+import type {QrConfig} from './core/qr.ts';
+import {PrivacyCoordinator} from './modules/privacy.ts';
+import {QrGuard} from './modules/qrguard/runtime.ts';
+import {QrSensor} from './qr/sensor.ts';
+import {detectQr} from './qr/detector.ts';
 import { readFileSync } from 'node:fs';
 import Fastify from 'fastify';
 import { loadRecordedTakes } from './presentation/takes.ts';
@@ -24,7 +30,7 @@ import { TagOut } from './modules/tagout/runtime.ts';
 import { pollCrew } from './modules/tagout/crew.ts';
 import type { CrewPeer } from './modules/tagout/crew.ts';
 
-export function createApp(options: { databasePath: string; simulated: boolean; visionCaptureIntervalMs?: number; chatAutoDelete?: boolean; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
+export function createApp(options: { databasePath: string; simulated: boolean; visionCaptureIntervalMs?: number; chatAutoDelete?: boolean; qr?: QrConfig; frameDirectory?: string; demoDisplayName?: string; twitch?: TwitchConfig; obs?: ObsConfig; obsWire?: ObsWire; ai?: AIConfig; crew?: readonly CrewPeer[]; crewToken?: string; energyAlertThreshold?: number; tagoutPolicy?: { energyThreshold: number; sustainSeconds: number }; exposureThresholds?: { warn: number; act: number } }) {
   const visionCaptureIntervalMs = parseVisionCaptureIntervalMs(options.visionCaptureIntervalMs);
   const app = Fastify({ logger: false, bodyLimit: 16_384 });
   app.register(websocket, { options: { maxPayload: 2048 }, preClose(done) {
@@ -66,7 +72,12 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
   const twitch = !options.simulated && options.twitch ? new TwitchRuntime(database, options.twitch) : null;
   const obs = !options.simulated && options.obs ? new ObsClient(options.obs, options.obsWire) : null;
   const ai = !options.simulated && options.ai ? new ResponsesAI(options.ai) : null;
-  const offthemap = obs && ai ? new OffTheMap({ available: () => obs.connected, capture: () => obs.capture(), analyze: (frame) => ai.vision(frame), privacy: () => obs.applyPrivacy(), confirmPrivacy: () => obs.confirmPrivacy(), restore: () => obs.restore(), marker: async () => {
+  const qrConfig=options.qr??parseQrConfig({});
+  const privacy=obs?new PrivacyCoordinator({protect:()=>obs.applyPrivacy(),restore:()=>obs.restore()}):null;
+  const marker=async()=>{const id=twitch?.auth.identity?.userId;if(twitch&&id)return twitch.helix.marker(id);throw Error('Twitch unavailable');};
+  const qr=obs&&privacy&&qrConfig.enabled?new QrGuard(qrConfig,database,{protect:()=>privacy.hold('qr_guard',true),confirm:()=>obs.confirmPrivacy(),available:()=>obs.connected,release:()=>privacy.hold('qr_guard',false),marker}):null;
+  const qrSensor=qr&&obs?new QrSensor({capture:async()=>{await obs.prepareQr(qrConfig.source,qrConfig.renderDelayMs);return obs.capturePng(qrConfig.source,qrConfig.frameWidth);},observe:(value,timing)=>qr.observe(value,timing),unavailable:()=>qr.unavailable()},qrConfig.intervalMs):null;
+  const offthemap = obs && ai ? new OffTheMap({ available: () => obs.connected, capture: async () => { if(!qr)return obs.capture(); if(qr.snapshot().active)throw Error('QR preflight unavailable'); const image=await obs.captureVisionPng(); if(detectQr(image).detected)throw Error('QR frame withheld'); return `data:image/png;base64,${image.toString('base64')}`; }, analyze: (frame) => ai.vision(frame), privacy: () => privacy!.hold('offthemap',true), confirmPrivacy: () => obs.confirmPrivacy(), restore: () => privacy!.hold('offthemap',false), marker: async () => {
     const id = twitch?.auth.identity?.userId;
     if (twitch && id) return twitch.helix.marker(id);
     throw new Error('Twitch unavailable');
@@ -101,11 +112,12 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
   app.addHook('onReady', async () => {
     await twitch?.start();
     if (obs) void obs.start();
+    qrSensor?.start();
     if (tagout) { void updateCrew(); crewTimer = setInterval(() => { void updateCrew(); }, 5_000); crewTimer.unref(); }
     if (offthemap) { visionTimer = setInterval(() => { void offthemap.sample(Date.now()); }, visionCaptureIntervalMs); visionTimer.unref(); }
     if (demo) { frames = await loadFrameFolder(true, options.frameDirectory ?? fileURLToPath(new URL('../test/fixtures/frames', import.meta.url))); demo.tick(); timer = setInterval(() => { if (!demoPaused) demo?.tick(); }, 4_000); timer.unref(); }
   });
-  app.addHook('onClose', async () => { closing = true; offthemap?.invalidateAnalysis(); clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
+  app.addHook('onClose', async () => { closing = true; qrSensor?.stop(); await qr?.stop(); offthemap?.invalidateAnalysis(); clearInterval(timer); clearInterval(visionTimer); clearInterval(crewTimer); twitch?.stop(); await obs?.stop(); database.close(); });
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     let hostname = '';
@@ -118,6 +130,8 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
   });
   app.get('/api/review/takes', async () => (await takes).map(({ id, label, simulated, points }) => ({ id, label, simulated, samples: points.length })));
   app.get<{ Params: { id: string } }>('/api/review/takes/:id', async (request, reply) => { const take = (await takes).find(take => take.id === request.params.id); return take ?? reply.code(404).send({ error: 'Take unavailable' }); });
+  app.get('/api/qr',async()=>qr?.snapshot()??{enabled:false,status:options.simulated?'disabled':'unavailable'});
+  app.post('/api/qr/dismiss',async(_request,reply)=>{if(!qr)return reply.code(503).send({error:'QR Guard unavailable'});try{await qr.dismiss();return {dismissed:true};}catch{return reply.code(503).send({error:'QR Guard unavailable'});}});
   app.get('/api/latency', async () => ({ simulated: options.simulated, captureIntervalMs: visionCaptureIntervalMs, endpoint: 'OBS program confirmation; excludes player/encoder/network', live: offthemap?.latency() ?? null, benchmark: readLatencyBenchmark() }));
   app.get('/api/private/frame', async (request, reply) => { if (request.headers['x-spotter-preview'] !== 'private-dashboard') return reply.code(403).send({ error: 'Private dashboard only' }); return offthemap?.preview() ?? null; });
   app.get('/api/overlay', async () => {
@@ -152,11 +166,11 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
   }
   app.post('/api/obs/disconnect', async (_request, reply) => {
     if (!obs) return reply.code(503).send({ error: 'OBS integration unavailable' });
-    offthemap?.invalidateAnalysis(); await obs.stop(); return { connected: false };
+    offthemap?.invalidateAnalysis(); qrSensor?.stop(); qr?.unavailable(); await obs.stop(); return { connected: false };
   });
   app.post('/api/obs/reconnect', async (_request, reply) => {
     if (!obs) return reply.code(503).send({ error: 'OBS integration unavailable' });
-    await obs.start(); return { connected: obs.connected };
+    await obs.start(); qrSensor?.start(); return { connected: obs.connected };
   });
   app.post('/api/privacy/dismiss', async (_request, reply) => {
     if (!offthemap) return reply.code(503).send({ error: 'Privacy integration unavailable' });
@@ -201,6 +215,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
     energyAlertThreshold, tagoutEnergyThreshold: tagoutPolicy.energyThreshold, tagoutSustainS: tagoutPolicy.sustainMs / 1000,
     combinedAlert: advanceCombinedAlert(energyHold, { now: Date.now(), energy: secondwind!.snapshot(Date.now()).energy, exposure: offthemap?.snapshot().exposure.score ?? null, available: offthemap?.snapshot().analysis === 'available', threshold: energyAlertThreshold }).active,
     ...(offthemap?.snapshot() ?? {}),
+    qrGuard: qr?.snapshot()??{enabled:false,status:'unavailable'},
     moderation: guard?.snapshot().entries ?? [],
     chatGuard: guard?.snapshot().status ?? 'analysis unavailable',
     connected: { twitch: twitch?.snapshot().connected ?? false, obs: obs?.connected ?? false, ai: offthemap?.snapshot().analysis === 'available' },
@@ -210,7 +225,7 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
     if (state.combinedAlert && !combinedWasActive) presentationEvents.push({ at: Date.now(), label: 'Combined alert', kind: 'alert' });
     combinedWasActive = state.combinedAlert;
     if (presentationEvents.length > 120) presentationEvents.splice(0, presentationEvents.length - 120);
-    return { ...state, presentationEvents: [...presentationEvents, ...(offthemap?.snapshot().presentationEvents ?? [])] };
+    return { ...state, qrEvents:qr?.snapshot().entries??[], presentationEvents: [...presentationEvents, ...(offthemap?.snapshot().presentationEvents ?? [])] };
   });
   return app;
 }

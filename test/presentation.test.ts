@@ -68,7 +68,7 @@ test('covering display names resolve via Twitch and cache without exposing a num
 test('analyzed OBS frame reaches only the private memory endpoint and disappears on disconnect', async () => {
   const { createApp } = await import('../src/app.ts');
   const image = 'data:image/jpeg;base64,AA==';
-  const app = createApp({ databasePath: ':memory:', simulated: false,
+  const app = createApp({ databasePath: ':memory:', simulated: false, qr: (await import('../src/core/qr.ts')).parseQrConfig({ QR_GUARD:'0' }),
     obs: { url: 'ws://127.0.0.1:4455', password: '', privacyScene: 'Privacy' },
     obsWire: { connect: async () => ({}), disconnect: async () => {}, on() {}, call: async (name: string) => name === 'GetCurrentProgramScene' ? { currentProgramSceneName: 'Main' } : { imageData: image } } as unknown as import('../src/obs/client.ts').ObsWire,
     ai: { key: 'test-only', model: 'fixture', fetcher: async () => new Response(JSON.stringify({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ clues: [{ category: 'transit', description: 'Transit identifier visible', severity: 1, confidence: .9 }] }) }] }] }), { status: 200 }) },

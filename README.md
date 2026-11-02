@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**144 automated tests (144 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**152 automated tests (152 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -353,4 +353,4 @@ The natural sample is a development-unseen, author-labelled holdout, not indepen
 
 ## QR Guard feasibility (in progress)
 
-QR Guard is not enabled yet. Before selecting a local detection-only library, `npm run qr:obs-probe` checks the stock OBS Render Delay topology with synthetic colors:500ms on Main and screenshots of an unfiltered child source. It refuses active stream/record outputs, restores the original scene and removes its temporary source/filter. Captures stay in RAM; only numeric timing results go to ignored data/takes/qr-guard/. Real OBS33.0.0 verified the topology:500ms on Main, unfiltered child ahead by407–476ms (median441ms,n8, polling uncertainty up to42ms). Uniform-color JPEG1280px capture median7.87ms,p9510.46ms,n50; natural-video/detector timing and Twitch player verification remain pending. No pre-air protection claim is made. See [QR Guard investigation](docs/QR_GUARD.md).
+QR Guard implementation is available (`QR_GUARD=1` by default in real OBS mode); performance and Twitch proof are still pending. The local geometry detector never invokes payload decoding. `npm run qr:obs-probe` checks the stock OBS Render Delay topology with synthetic colors:500ms on Main and screenshots of an unfiltered child source. It refuses active stream/record outputs, restores the original scene and removes its temporary source/filter. Captures stay in RAM; only numeric timing results go to ignored data/takes/qr-guard/. Real OBS33.0.0 verified the topology:500ms on Main, unfiltered child ahead by407–476ms (median441ms,n8, polling uncertainty up to42ms). Uniform-color JPEG1280px capture median7.87ms,p9510.46ms,n50; natural-video/detector timing and Twitch player verification remain pending. No pre-air protection claim is made. See [QR Guard investigation](docs/QR_GUARD.md).
