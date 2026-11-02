@@ -35,9 +35,8 @@ export async function qrRecorderWindow(url:string,password:string,wire:SetupWire
   if(new URL(url).port!=='4456')throw Error('Secondary recorder only');await wire.connect(url,password);
   try{
     if((await wire.call('GetStreamStatus')).outputActive||(await wire.call('GetRecordStatus')).outputActive)throw Error('Recorder outputs must be stopped');
-    let item:number;
-    if(!(await wire.call('GetInputList')).inputs.some(input=>input.inputName===windowInput))item=(await wire.call('CreateInput',{sceneName,inputName:windowInput,inputKind:'screen_capture',inputSettings:{type:1,window:0,hide_cursor:true},sceneItemEnabled:false})).sceneItemId;
-    else item=(await wire.call('GetSceneItemId',{sceneName,sourceName:windowInput})).sceneItemId;
+    if((await wire.call('GetInputList')).inputs.some(input=>input.inputName===windowInput)){await wire.call('RemoveInput',{inputName:windowInput});await new Promise(r=>setTimeout(r,250));}
+    const item=(await wire.call('CreateInput',{sceneName,inputName:windowInput,inputKind:'screen_capture',inputSettings:{type:1,window:0,hide_cursor:true},sceneItemEnabled:false})).sceneItemId;
     const candidates=(await wire.call('GetInputPropertiesListPropertyItems',{inputName:windowInput,propertyName:'window'})).propertyItems.filter(entry=>entry.itemEnabled&&typeof entry.itemName==='string'&&/Spotter QR Guard — private evidence/.test(entry.itemName));
     if(candidates.length!==1||typeof candidates[0]!.itemValue!=='number'||!Number.isInteger(candidates[0]!.itemValue))throw Error('Unique proof window unavailable');
     await wire.call('SetInputSettings',{inputName:windowInput,inputSettings:{type:1,window:candidates[0]!.itemValue as number,hide_cursor:true},overlay:true});

@@ -11,6 +11,10 @@ test('native evidence fallback selects only the uniquely named proof window, nev
   const create=calls.find(c=>c.name==='CreateInput')!;assert.deepEqual(create.args.inputSettings,{type:1,window:0,hide_cursor:true});
   const selected=calls.find(c=>c.name==='SetInputSettings')!;assert.deepEqual(selected.args.inputSettings,{type:1,window:42,hide_cursor:true});assert.ok(!calls.some(c=>/StartRecord|StartStream/.test(c.name)));
 });
+test('native recorder refreshes its own capture input rather than retaining a closed Chrome window',async()=>{
+ const calls:string[]=[];const wire={async connect(){},async disconnect(){},async call(name:string){calls.push(name);if(name==='GetInputList')return{inputs:[{inputName:'Spotter QR Evidence Window'}]};if(name==='CreateInput')return{sceneItemId:8};if(name==='GetInputPropertiesListPropertyItems')return{propertyItems:[{itemEnabled:true,itemName:'Spotter QR Guard — private evidence',itemValue:88}]};return{outputActive:false};}}as unknown as SetupWire;
+ await qrRecorderWindow('ws://localhost:4456','',wire);assert.ok(calls.indexOf('RemoveInput')>=0);assert.ok(calls.indexOf('RemoveInput')<calls.indexOf('CreateInput'));assert.ok(calls.indexOf('CreateInput')<calls.indexOf('GetInputPropertiesListPropertyItems'));
+});
 test('evidence recorder refuses a black browser composition before starting output',async()=>{
   const png=new PNG({width:32,height:18});png.data.fill(0);const calls:string[]=[];
   const wire={async connect(){},async disconnect(){},async call(name:string){calls.push(name);return name==='GetSourceScreenshot'?{imageData:'data:image/png;base64,'+PNG.sync.write(png).toString('base64')}:{outputActive:false};}}as unknown as SetupWire;

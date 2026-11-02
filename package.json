@@ -32,7 +32,8 @@
     "qr:benchmark": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-benchmark.ts",
     "qr:demo": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-demo.ts",
     "qr:proof-view": "node scripts/qr-proof-view.mjs",
-    "qr:recorder": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-recorder.ts"
+    "qr:recorder": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-recorder.ts",
+    "qr:setup": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-setup.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

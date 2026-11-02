@@ -93,3 +93,32 @@ Geometry-only initial pass:26/30 synthetic hits and2/24 IRL detections (both for
 | Capture start → Privacy program confirmation | 20 | 82.46 | 91.28 |
 
 The150ms phase until the next capture is outside these timings. Adding nominal sampling phase150ms + capture-path p9591.28ms + one33.33ms video frame gives an illustrative budget of274.61ms against500ms. This sum is NOT a measured combined p95 or hard bound; scheduler/capture load can vary. The measured color-probe lead was407–476ms with up to42ms polling uncertainty. Program confirmation is not pixel-level or Twitch-player proof. No claim that the QR stayed off-air is made until the live player test. Numeric evidence remains ignored in data/takes/qr-guard/latency-150ms.json.
+
+### First Twitch QR trial: inconclusive (2026-11-01)
+
+Real Twitch was live and QR stream markers were created (sanitized receipts retained under ignored data/takes/qr-guard/). The secondary OBS browser was black; stock single-window ScreenCaptureKit successfully recorded the private dashboard plus actual Twitch player at1920×1080/60fps. Chrome's player video was1280×720, unpaused/readyState4 with advancing currentTime.
+
+However, OBS Main became fully transparent with Render Delay enabled while OBS still reported Main selected; the Twitch player retained the Privacy picture. Disabling the filter offline restored the known synthetic blue video. Recreating the filter, trying a nested scene and a direct-source delay did not recover this graphics state. Restarting the stopped primary OBS did recover opaque delayed video and an actual clean-recovery cycle (transparency during the initial buffer warm-up is expected). Root cause is not established; do not attribute it conclusively to a particular transition or filter-reset call.
+
+Every recorded frame of three early movie windows was inspected locally with the geometry detector, without decoding or extracting image files: initial manual control3429frames/0detections; protected window2903frames/0detections; final short manual control2435frames/0detections, all0detector-unavailable. Because the positive control also failed, these zero counts **cannot demonstrate that QR Guard prevented exposure**. Additional diagnostic movies, contact sheet and closed numeric receipts stay private under data/. No “QR never reached the air” claim is supported by this trial.
+
+A failing regression now covers OBS reporting Main with a completely transparent output: readiness must reject it. The adapter periodically checks active Main alpha pixels in RAM, after expected buffer warm-up, and reports QR unavailable on an empty output; it never returns or stores the image. It does not assert that opaque pixels prove a current or correctly delayed feed. No score, policy threshold or calibration changed. Repeat moving-code timing and a successful visible benign Dismiss control are still required before final viewer-level conclusions.
+
+Post-restart offline repeat with the encoded moving QR,20trials at150ms/1280px/500ms buffer: detection→scene median7.40ms,p959.38ms; capture→scene median71.99ms,p9582.42ms. Marker HTTP is excluded. The new active-Main output preflight was enabled in this run, which completed20 protections and automatic recoveries. Numeric evidence: ignored data/takes/qr-guard/latency-150ms-moving.json. This is again an OBS/RPC benchmark, not a Twitch pixel result.
+
+### Continuous-buffer repeat (current QR layout)
+
+Because repeated buffer resets eventually produced empty output again, the stopped-OBS layout now keeps Main rendering below a separately opaque stock color in Privacy. No reset occurs on recovery. Ordering, transforms, enabled state, normal blending, opaque source/no backstop filters and no scene cycle are checked. Core tests require M clean observations AND actual clean elapsed time≥configured delay for automatic recovery; defaultM14/~2.1s is unchanged. Dismiss is an explicit override.
+
+Twenty actual moving-code protections/recoveries completed: detection→scene median10.47ms,p9512.87ms; capture→scene median70.82ms,p9592.93ms (150ms/1280px/500ms expected delay).12/12 subsequent numeric opacity samples spanning Main and Privacy were fully opaque. Latest numeric report is latency-150ms-moving.json; pre-layout report was retained separately. These still do not establish viewer pixels or a hard latency bound. Additional rendering and continued Main media/audio activity during Privacy are tradeoffs; silent inputs were used, not a camera-audio validation.
+
+### User-supplied QR video screening (local only)
+
+Two user-provided4K videos were scanned locally at5fps, at1280px and1920px widths. Source files remain ignored in `qr videos/`; only numeric timing/detection/box reports are saved under ignored data/takes/qr-guard/. No frames written, no payload decoding, no AI. These are detection counts, **not recall/precision**: per-frame labels have not been fixed. Higher resolution helps some frames and misses others; do not infer absence from a miss. Neither input was broadcast as a test code because its payload is unknown; the public proof uses known generated TEST-ONLY input.
+
+| Clip | SHA-256 | Samples | Detected1280 | Detected1920 | Detector median/p951280 | Detector median/p951920 |
+|---|---|---:|---:|---:|---:|---:|
+|17363866 (10.30s)|2df8b2627ece3daa9428443f7cdac159c0016792ef2759c278f90e7dadda2753|52|4|9|60.02/72.56ms|133.98/151.32ms|
+|15329614 (7.58s)|301bb3fe86364abee84544bc3567df590860e3d1b4f635bfc33fe92a8ba741de|38|9|13|62.05/76.63ms|137.20/155.59ms|
+
+All four runs had0unavailable. First detected boxes were approximately65×61px and73×71px at1280; these are small targets.1920px detection cost more than doubles and excludes screenshot cost, so its current coverage gain is insufficient evidence to change the default fast-loop width/interval. At1280, detections include2.0/8.4/9.0/9.2s in the first clip and0.0/0.2/4.0/5.0/5.6/6.0/6.2/6.4/6.6s in the second (nominal sample times). Source provenance/license was not independently verified; no distribution of these files is made.

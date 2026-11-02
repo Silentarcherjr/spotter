@@ -25,3 +25,8 @@ test('independent privacy owners cannot restore over each other or steal a manua
   d=privacyHold(d.state,'qr_guard',false);assert.deepEqual(d.actions,[]);
   d=privacyHold(d.state,'offthemap',false);assert.deepEqual(d.actions,['restore']);assert.deepEqual(d.state,[]);
 });
+test('automatic QR release waits for both M clean captures and the actual render-buffer duration',()=>{
+ const policy={...config,cleanFrames:1};let state=stepQr(initialQr(),{type:'sample',at:0,detected:true},policy).state;
+ for(const at of [150,300,450]){const d=stepQr(state,{type:'sample',at,detected:false},policy);state=d.state;assert.deepEqual(d.actions,[]);}
+ assert.deepEqual(stepQr(state,{type:'sample',at:650,detected:false},policy).actions,['release']);
+});

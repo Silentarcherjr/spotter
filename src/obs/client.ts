@@ -1,4 +1,6 @@
 import OBSWebSocket from 'obs-websocket-js';
+import {PNG} from 'pngjs';
+import{prepareQrLayout}from'./qr-layout.ts';
 import { parseVisionFrameWidth } from '../config.ts';
 
 export type ObsWire = Pick<OBSWebSocket, 'connect' | 'disconnect' | 'call' | 'on'>;
@@ -12,6 +14,7 @@ export class ObsClient {
   private retry: ReturnType<typeof setTimeout> | undefined;
   private qrPrepared=false;private qrCheckedAt=0;
   private qrPreparing:Promise<void>|null=null;
+  private mainRestoredAt=0;
   private previousScene: string | null = null;
   private previousFilter: boolean | null = null;
   constructor(config: ObsConfig, wire: ObsWire = new OBSWebSocket()) {
@@ -65,8 +68,16 @@ export class ObsClient {
         else{await this.limit(this.wire.call('SetSourceFilterSettings',{sourceName:'Main',filterName:own,filterSettings:{delay_ms:delayMs}}));await this.limit(this.wire.call('SetSourceFilterEnabled',{sourceName:'Main',filterName:own,filterEnabled:true}));}
         await this.limit(this.wire.call('SetSceneSceneTransitionOverride',{sceneName:this.config.privacyScene,transitionName:cut.transitionName}));
       }
+      await this.limit(prepareQrLayout(this.wire,this.config.privacyScene));
       const confirmed=await this.limit(this.wire.call('GetSourceFilter',{sourceName:'Main',filterName:own}));
       if(!confirmed.filterEnabled||confirmed.filterSettings.delay_ms!==delayMs)throw Error('QR delay unavailable');
+      // A scene-name acknowledgement can coexist with an empty/stalled GPU delay.
+      // Check only active Main, after its expected buffer warm-up. Pixels stay in RAM.
+      if(this.qrPrepared&&performance.now()-this.mainRestoredAt>delayMs+500&&(await this.limit(this.wire.call('GetCurrentProgramScene'))).currentProgramSceneName==='Main'){
+        const png=PNG.sync.read(await this.capturePng('Main',320));let visible=0;
+        for(let i=3;i<png.data.length;i+=4)if(png.data[i]!>0)visible++;
+        if(visible<png.width*png.height*.01)throw Error('QR output unavailable');
+      }
       this.qrPrepared=true;this.qrCheckedAt=performance.now();
     };
     this.qrPreparing=run();try{await this.qrPreparing;}finally{this.qrPreparing=null;}
@@ -104,8 +115,8 @@ export class ObsClient {
       await this.limit(this.wire.call('SetSourceFilterEnabled', { sourceName: this.config.source, filterName: this.config.blurFilter, filterEnabled: this.previousFilter }));
       this.previousFilter = null;
     } else if (this.previousScene !== null) {
-      if(this.qrPrepared&&this.previousScene==='Main'){const filter=await this.limit(this.wire.call('GetSourceFilter',{sourceName:'Main',filterName:'Spotter QR Render Delay'}));await this.limit(this.wire.call('SetSourceFilterSettings',{sourceName:'Main',filterName:'Spotter QR Render Delay',filterSettings:{delay_ms:Number(filter.filterSettings.delay_ms)}}));}
       await this.limit(this.wire.call('SetCurrentProgramScene', { sceneName: this.previousScene }));
+      if(this.previousScene==='Main')this.mainRestoredAt=performance.now();
       this.previousScene = null;
     }
   }

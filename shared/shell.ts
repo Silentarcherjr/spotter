@@ -194,7 +194,7 @@ async function refresh(): Promise<void> {
       }
       hidden('error', true);
     }
-  } catch { text('error', 'analysis unavailable · server disconnected'); hidden('error', false); text('connection', '● Disconnected'); }
+  } catch { text('error', 'analysis unavailable · server disconnected'); hidden('error', false); text('connection', '● Disconnected'); const qrIndicator=element('qr-indicator');if(qrIndicator&&qrIndicator.dataset.state&&qrIndicator.dataset.state!=='disabled'){qrIndicator.textContent='QR Guard · unavailable';qrIndicator.dataset.state='unavailable';qrIndicator.title='Server disconnected';} }
 }
 void refresh();
 setInterval(() => { void refresh(); }, 1_000);
