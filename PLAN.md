@@ -1,6 +1,6 @@
 # Build plan: phases, not days
 
-Deadline: **Sunday Nov 2, 2026, 2:00pm PST = 4:00pm Panama**. Target: submit by **1:00pm Panama**.
+Deadline: **Monday Nov 2, 2026, 2:00pm PST (5:00pm Panama)**. Target: submit by **1:00pm Panama**.
 
 Work through the phases in order, without waiting between them. After each phase: run `npm test`, commit and push, append an entry to `docs/codex-log.md`, then continue with the next phase. Only stop and ask the human when you hit a **[HUMAN]** step (credentials, OBS, live channels, media) or a real blocker. If a [HUMAN] step is pending, build everything that can run in `SIM=1` / mock mode and come back to it.
 

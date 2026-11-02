@@ -149,7 +149,7 @@ export function transitionTagOut(
     state.phase = 'raiding';
   if (
     event.type === 'raid_confirmed' &&
-    state.phase === 'idle' &&
+    (state.phase === 'idle' || state.phase === 'home') &&
     event.toId === context.broadcasterId &&
     context.crew.some((partner) => partner.id === event.fromId)
   ) {

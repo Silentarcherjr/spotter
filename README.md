@@ -8,15 +8,16 @@ A local companion with three modules: Off the Map (identifying-clue exposure), S
 
 ## Current status
 
-The private repository contains the scaffold, pure core, key-free scripted demo and implementations for Twitch, OBS/vision, local audio and crew relays. **Live-service verification and the submission are still pending.** Real OpenRouter vision has been exercised with a private local-video calibration. Real OAuth and EventSub chat rate have been checked on the authorized channel. Live blocked-term enforcement/removal and a controlled Chat Guard deletion have also been verified. Real OBS capture/vision, threshold privacy, stream markers and scene restoration have now been exercised while streaming a prerecorded clip. A real outbound raid and cancellation have now been verified between two owned live channels; tag back is blocked by the receiving channel’s minimum raider-account age. Natural microphone capture remains unverified.
+Spotter has been exercised with real Twitch accounts, OBS and real vision using a recorded IRL clip and simulated voice. The final live session verified privacy, a stream marker, Dismiss, chat moderation and the outbound raid. A complete two-channel raid and tag back had already been confirmed on October 29 with `elsilentarcher`; in the later final session the receiver remained in `home`, so its return was not demonstrated. The incoming-raid transition has since been corrected with offline regression tests; it has not yet been revalidated live. See [LIVE_CHECKLIST](docs/LIVE_CHECKLIST.md) and [EVAL](docs/EVAL.md).
 
 | Area | Verified | Still needed |
 | --- | --- | --- |
-| Scaffold/core/demo | Automated tests and browser walkthrough | Real demo media |
-| Twitch | Real OAuth/chat rate, blocked-term hold/removal, audited test deletion and CLI/live fixtures | Real raid and submission recording |
-| Off the Map | Real OBS/vision → privacy/marker → restore; WebSocket disconnect survival; private dashboard take | Full-motion submission edit; full OBS-process shutdown proof |
-| Second Wind | Shared mic/file extractor, 11-minute TTS baseline, measured energy/chat and real OBS HUD | Natural microphone and tired-voice validation |
-| Tag Out | Approval/live guards, cancellation and real two-channel raid/tag-back with EventSub home confirmation | Finished video edit |
+| Pre-stream check | Real OBS read-only inspection and real vision; GREEN before and after the final session | Review any amber findings before going live; green is not a guarantee |
+| Off the Map | Real OBS/vision with SIMULATED recorded clip: score 82, Privacy seen in the Twitch player, marker accepted and Dismiss restored Main | A forced live model failure and full OBS-process shutdown remain unverified |
+| Chat Guard | Real Twitch held a harmless blocked-term test; term removed; a fictional guess was flagged for mod review, not deleted | Live model failure/fail-soft check; real token refresh remains unverified |
+| Second Wind | SIMULATED voice, real chat activity, combined alert and public stamina HUD | Natural microphone and tired-voice validation; the final session did not establish energy/chat correlation |
+| Tag Out | October 29 real two-channel outbound and return raids with EventSub and receiver overlay; cancellation also verified | Retest the receiver's `home` transition and tag back after the offline fix |
+| QR Guard | Offline OBS encoded output: protected 0/539 QR-positive frames versus 93/538 in the unprotected control | A repeatable Twitch-player result remains unverified: an earlier synthetic take had a visible control, but the latest follow-up did not |
 
 ## Run locally
 
@@ -46,7 +47,7 @@ npm run demo
 
 No `.env` or credentials are needed. `SIM=1` disables all live integrations and microphone activation. The accelerated story shows generic clues accumulating, a reversible privacy blur, declining energy and chat activity, an audited simulated mod-review flag, a partner suggestion and a relay. Click **Approve simulated raid**, then **Request tag back** and the partner's separate approval. **Replay simulated session** restarts the story. Every simulated view/source displays `SIMULATED`.
 
-The default image is our synthetic SVG fixture. Mock clues follow the deterministic script; no model interprets those pixels. The initial chat window is warmed up so the report correctly compares 20 → 12 messages/min (−40%). Set `SIM_FRAME_DIR` to owned JPEG/PNG/SVG fixtures to replace the illustration: 1–20 images, at most 2 MB each and 20 MB total. Existing fixtures are read into memory; captured/model frames are never written to disk. Real IRL and voice media are pending.
+The default image is our synthetic SVG fixture. Mock clues follow the deterministic script; no model interprets those pixels. The initial chat window is warmed up so the report correctly compares 20 → 12 messages/min (−40%). Set `SIM_FRAME_DIR` to owned JPEG/PNG/SVG fixtures to replace the illustration: 1–20 images, at most 2 MB each and 20 MB total. Existing fixtures are read into memory; captured/model frames are never written to disk. Recorded IRL and simulated voice media were used in the live tests; the voice input is explicitly SIMULATED.
 
 ## Broadcast design
 
@@ -223,7 +224,7 @@ Definite Twitch4xx rejections (except409) return to a state requiring fresh appr
 
 A click rechecks both streams via Helix, partner energy, source token ownership and the persisted request window. The UI waits for EventSub confirmation; the 90-second countdown is informational. Ambiguous write failure stays pending with a cancel path, without automatic retry or false success. State/attempts survive restarts and are isolated per broadcaster.
 
-The receiving partner can request tag back and must approve it with their own dashboard/token. Their opt-in overlay shows “Covering for …’s community”. The two-channel live test verified the automatic suggestion, manual request, click approval, cancellation, Twitch-native countdown and outbound EventSub confirmation. Tag back was requested/approved from the companion but rejected with HTTP400: the primary requires a raider account at least30days old, while alredio was created on2026-10-29. The session is paused; home confirmation remains unverified. See [the handoff](docs/TAGOUT_HANDOFF.md).
+The receiving partner can request tag back and must approve it with their own dashboard/token. Their opt-in overlay shows “Covering for …’s community”. On October 29, a complete live cycle with `elsilentarcher` confirmed the outbound raid and tag back through EventSub on both sides, including the receiver overlay; cancellation was also tested. The earlier attempt with the younger `alredio` account was rejected by Twitch. In the November 2 final session, the outbound raid was confirmed on the sender but the receiver remained in `home`, so the return was not repeated. The incoming-raid transition from `home` is now covered by offline regression tests and awaits live revalidation. See [the handoff](docs/TAGOUT_HANDOFF.md) and [LIVE_CHECKLIST](docs/LIVE_CHECKLIST.md).
 
 ## Architecture and ethics
 
@@ -256,7 +257,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**179 automated tests (179 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**181 automated tests (181 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -378,7 +379,7 @@ Evidence recording uses a fresh blank **LOCAL RECORDING ONLY** profile on second
 
 QR output verification (November 2): an offline **encoded program recording**, with QR Guard disabled, reproduced Privacy staying visible even after requesting Main. This matches OBS's [confirmed transition override lock](https://github.com/obsproject/obs-studio/issues/11914); the [proposed upstream fix](https://github.com/obsproject/obs-studio/pull/14093) was still open when checked. An offline Studio Mode round-trip plus uniform global Cut/no Main/Privacy overrides recovered the output. Do not install an unmerged patch or third-party plugin for this workaround. `npm run qr:setup -- --recover-transitions` performs the explicit recovery only with both outputs stopped, preserving the prior Studio Mode setting/preview. Stop Spotter’s OBS connection before maintenance.
 
-The same 18 s known-input recordings then yielded: unprotected control **93/538 QR-visible encoded frames**, protected **0/539**, Dismiss **31/539** (one second visible during its intentional grace, subsequent cycles protected). The protected sensor saw20 positive samples,3 privacy actions,0 capture failures. One blank start frame occurred in each recovered recording and is disclosed. This validates local output for the tested synthetic QR; the earlier Twitch trials remain inconclusive until a fresh actual-player control succeeds. No score, threshold, detector dependency or payload decoding changed.
+The same 18 s known-input recordings then yielded: unprotected control **93/538 QR-visible encoded frames**, protected **0/539**, Dismiss **31/539** (one second visible during its intentional grace, subsequent cycles protected). The protected sensor saw20 positive samples,3 privacy actions,0 capture failures. One blank start frame occurred in each recovered recording and is disclosed. This validates local output for the tested synthetic QR; a later Twitch-player take had a detected positive control, while the latest follow-up was inconclusive; repeatability remains unverified. No score, threshold, detector dependency or payload decoding changed.
 
 Reproduce offline with `npm run qr:program-proof -- control --leave-disconnected` (or `protected` / `dismiss`), then `npm run qr:analyze-take -- data/takes/qr-guard/program-control-20261102.mov --program --expect-qr`; use `--expect-no-qr` for protected output. The helper records only known TEST-ONLY media/public overlay on primary OBS under a fresh blank profile with muted audio, never starts streaming, checkpoints restoration metadata in ignored data/, then restores the prior profile/video/mutes/media. It never records a desktop. Captured detector frames remain RAM-only; these explicitly requested output-evidence movies are private local artifacts.
 

@@ -465,3 +465,10 @@
 - A temporary copy of the existing frame analyzer allowed the requested ignored `data/takes/final/` location; method and player crop unchanged. Full 60 fps analysis of 16,546 frames returned 0 QR detections, 0 unavailable and 67 blank across the whole recording including startup. The intended Dismiss positive control was also absent: **viewer prevention is inconclusive**, even though a prior separately documented take had a detected positive control. Aggregate n=64 capture→scene median 73.63 ms / p95 100.27 ms and detection→scene median 10.91 ms / p95 14.07 ms include offline preparation, not solely the live segment. No payload decoded or detector frames saved.
 - README, docs/EVAL.md, docs/LIVE_CHECKLIST.md and this log record the actual outcome. No score, thresholds or product logic changed.
 - Validation: npm test passed 179/179 with local port access.
+
+## 2026-11-02 — Tag Out receiver regression and delivery status
+
+- **Found live, regression first:** the November 2 final session left the receiver in `home` after an incoming crew raid. Added a pure-core test that first failed (`home` instead of `covered`) and a separate outsider-raid test before changing the transition. Incoming confirmed raids addressed to this broadcaster now accept both `idle` and `home` when the sender is in the crew; outsider raids remain ignored. No live revalidation was performed.
+- Rewrote README current status and Tag Out to distinguish the confirmed October 29 outbound/return from the later failed receiver transition; documented local QR encoded-output control and protected counts, earlier finite Twitch evidence and the inconclusive latest repeat, plus remaining token refresh, provider failure and natural-microphone checks. Corrected PLAN deadline and BRIEF heading/competition claim; updated LIVE_CHECKLIST's offline fix status. No dependencies, score or thresholds changed.
+- Files: src/core/tagout.ts, test/core.test.ts, README.md, PLAN.md, BRIEF.md, docs/LIVE_CHECKLIST.md and this log.
+- Validation: npm test 181/181, typecheck, lint, format:check and build passed.

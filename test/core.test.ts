@@ -236,6 +236,38 @@ test('moderation acts only on available high-confidence observations', async () 
   assert.equal(decideModeration({ guessing: false, confidence: 1 }), 'none');
 });
 
+test('receiving partner in home accepts a new raid from a crew member', () => {
+  const home = { ...initialTagOut(), phase: 'home' as const, homeId: 'old', partnerId: 'partner' };
+  const result = step(
+    home,
+    { type: 'raid_confirmed', fromId: 'main', toId: 'partner' },
+    {
+      broadcasterId: 'partner',
+      tokenOwnerId: 'partner',
+      crew: [{ id: 'main', live: true, energy: 20 }],
+    },
+  );
+  assert.equal(result.state.phase, 'covered');
+  assert.equal(result.state.homeId, 'main');
+  assert.equal(result.state.partnerId, 'partner');
+  assert.deepEqual(result.actions, []);
+});
+
+test('receiving partner in home ignores an incoming raid from outside the crew', () => {
+  const home = { ...initialTagOut(), phase: 'home' as const, homeId: 'old', partnerId: 'partner' };
+  const result = step(
+    home,
+    { type: 'raid_confirmed', fromId: 'unknown', toId: 'partner' },
+    {
+      broadcasterId: 'partner',
+      tokenOwnerId: 'partner',
+      crew: [{ id: 'main', live: true, energy: 20 }],
+    },
+  );
+  assert.deepEqual(result.state, home);
+  assert.deepEqual(result.actions, []);
+});
+
 test('receiving partner recognizes a configured incoming raid and home recognizes tag back', () => {
   const partnerContext = {
     broadcasterId: 'partner',

@@ -85,7 +85,7 @@ Offline implementation does not establish the real-service definition of done. D
 - [x] Harmless temporary blocked term held by Twitch and removed; fictional location guess recorded as `flag`, not deleted.
 - [x] SIMULATED voice energy 44, combined alert with available vision, real chat activity, and public stamina HUD observed in Twitch player.
 - [x] Both channels live and outbound raid approved by click; sender received EventSub and entered `covered`.
-- [ ] Receiver remained `home`; `Covering for` and tag back were not demonstrated in this session. Investigate persisted state and incoming raid transition before another attempt.
+- [ ] Receiver remained `home`; `Covering for` and tag back were not demonstrated in this session. The incoming-raid transition from `home` is now fixed and covered by offline regression tests; live revalidation remains pending.
 - [ ] Final-session QR test and `qr:analyze-take`: no synthetic QR was staged before going live; the existing setup refuses source changes while output is active. No QR take was created in this session.
 - [x] User stopped both streams; OBS states verified and final pre-stream check GREEN. Silent local recording and numeric receipts remain in `data/takes/final/`.
 
