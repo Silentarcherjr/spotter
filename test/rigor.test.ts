@@ -202,3 +202,30 @@ test('controlled OBS benchmark refuses active stream or recording without switch
     assert.ok(!calls.some((name) => /Set|Trigger|Screenshot/.test(name)));
   }
 });
+test('privacy action duration ends only after scene confirmation', async () => {
+  const { timedPrivacy } = await import('../src/observability/privacy-timing.ts');
+  let now = 100;
+  const timer = timedPrivacy(
+    () => now,
+    async () => {
+      now += 7;
+    },
+    async () => {
+      now += 13;
+    },
+  );
+  await timer.privacy();
+  assert.equal(timer.elapsed(), null);
+  await timer.confirm();
+  assert.equal(timer.elapsed(), 20);
+  const failed = timedPrivacy(
+    () => now,
+    async () => {},
+    async () => {
+      throw Error('offline');
+    },
+  );
+  await failed.privacy();
+  await assert.rejects(failed.confirm());
+  assert.equal(failed.elapsed(), null);
+});

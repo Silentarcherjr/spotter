@@ -174,6 +174,42 @@ Compared the configured `openai/gpt-4.1-mini` with [OpenRouter's `openai/gpt-6.1
 | GPT-4.1 mini | 3/3 | 3/3 | 4/6 available labels | 3/4 available | 2/6 invalid observation |
 | GPT-6.1 Terra | 0/3 | 0/3 | 7/8 | 6/6 | 0/6 |
 
-For each natural frame where mini produced valid observations, Terra detected every labelled category mini detected; Terra also detected landmarks in the other frames. Thus Terra met the requested adoption criterion on this sample and is configured **only** as `PRESTREAM_MODEL` locally. Off the Map retains `OPENAI_MODEL`. `PRESTREAM_MODEL` is optional and defaults to the existing model on other installations. Model confidence is self-reported, not a calibrated probability.
+For each natural frame where mini produced valid observations, Terra detected every labelled category mini detected; Terra also detected landmarks in the other frames. Thus Terra met the earlier pre-stream-only criterion on this sample and was initially selected as `PRESTREAM_MODEL`; the later full-Spotter evaluation below applies stricter criteria and supersedes that selection. Off the Map retains `OPENAI_MODEL`. `PRESTREAM_MODEL` is optional and defaults to the existing model on other installations. Model confidence is self-reported, not a calibrated probability.
 
 These are single runs, three repeated identical uniform inputs and correlated frames from only two videos; clean and natural labels are author judgments, not independent adjudication. Two mini outputs were unavailable and excluded rather than counted as misses. This small comparison is not a general false-positive/recall estimate or a guarantee; provider routing and model output can vary. The Pexels sources and freeze manifest are documented in the temporal evaluation above.
+
+## Full Spotter model comparison — 2026-11-02
+
+Ran `OPENAI_MODEL=openai/gpt-6.1-terra npm run eval` once with unchanged prompts, configured AI timeout, 1280 px/high detail, labels, histories and thresholds. The synthetic dataset hash was `ec3710e8f14bb2737d2772c9ef049c473c046e00a505a6a7bded3a91acd9d79c` and temporal freeze-manifest hash `3d0652debd2c6690aa6db3f8bb0dc2b7843f66cbd3eb564c466c32ad6e72aea5`, matching the published mini baseline. Original baseline and per-case outputs are preserved privately under ignored `data/eval/terra-comparison/`; model frames remain in memory.
+
+| Test | Model | TP | FP | FN | TN | Unavailable | Precision | Recall |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| All sequences ≥80 (12) | GPT-4.1 mini | 4 | 0 | 2 | 6 | 0 | 100% | 66.7% |
+| All sequences ≥80 (12) | GPT-6.1 Terra | 6 | 0 | 0 | 5 | 1 | 100% | 100% |
+| Synthetic sequences ≥80 (9) | GPT-4.1 mini | 3 | 0 | 2 | 4 | 0 | 100% | 60% |
+| Synthetic sequences ≥80 (9) | GPT-6.1 Terra | 5 | 0 | 0 | 4 | 0 | 100% | 100% |
+| Natural sequences ≥80 (3) | GPT-4.1 mini | 1 | 0 | 0 | 2 | 0 | 100% | 100% |
+| Natural sequences ≥80 (3) | GPT-6.1 Terra | 1 | 0 | 0 | 1 | 1 | 100% | 100% |
+| Synthetic frames ≥80 (30) | GPT-4.1 mini | 6 | 1 | 4 | 19 | 0 | 85.7% | 60% |
+| Synthetic frames ≥80 (30) | GPT-6.1 Terra | 7 | 1 | 1 | 19 | 2 | 87.5% | 87.5% |
+| Natural frames ≥80 (18) | GPT-4.1 mini | 0 | 0 | 2 | 16 | 0 | undefined | 0% |
+| Natural frames ≥80 (18) | GPT-6.1 Terra | 0 | 0 | 2 | 15 | 1 | undefined | 0% |
+| Chat classifier (40) | GPT-4.1 mini | 20 | 0 | 0 | 20 | 0 | 100% | 100% |
+| Chat classifier (40) | GPT-6.1 Terra | 17 | 0 | 3 | 20 | 0 | 100% | 85% |
+| Chat moderation confidence ≥0.8 (40) | GPT-4.1 mini | 20 | 0 | 0 | 20 | 0 | 100% | 100% |
+| Chat moderation confidence ≥0.8 (40) | GPT-6.1 Terra | 17 | 0 | 3 | 20 | 0 | 100% | 85% |
+
+Unavailable observations are excluded from precision and recall rather than treated as safe: Terra had 2/30 unavailable synthetic standalone frames, 6/65 unavailable unique temporal frames and one unavailable sequence, against zero in the mini baseline. Thus Terra does **not** meet the no-increase-in-unavailable criterion, even though its precision and recall on the available sequences meet the requested values. Chat recall is also lower. GPT-4.1 mini remains the configured model for Off the Map, Chat Guard and the pre-stream check under the broader requested adoption rule. The earlier small pre-stream experiment is retained above as historical evidence; it is not a substitute for this full comparison.
+
+Controlled offline OBS benchmark, same generated frame-21 input, configured timeout and 10 trials, excludes marker completion and viewer/network delay:
+
+| Measurement | GPT-4.1 mini baseline | GPT-6.1 Terra |
+|---|---:|---:|
+| Decided Privacy action → confirmed OBS scene | median 12.04 ms (derived from 8 single-sample trials only) | median 13.28 ms, p95 19.03 ms, n=10 |
+| Capture start → confirmed OBS scene | median 2.149 s, p95 2.616 s, n=10 | median 4.006 s, p95 4.909 s, n=10 |
+| Vision call, median of per-trial medians | 2.108 s, n=10 | 4.107 s, p95 4.880 s, n=10 |
+| Unavailable analysis attempts | 0 | 3 |
+
+The action clock starts immediately before the decided Privacy RPC and ends after scene readback; it is below 3.5 s for Terra. The 4.006 s full-path median is a different, practically relevant measurement, not the decision-to-scene value. Vision medians include per-trial medians when more than one sample was needed, so they cannot be subtracted from full-path medians as paired values. The old baseline did not directly measure action time; its value is derived only for eight single-sample trials. Ten trials and a single synthetic input do not establish population latency or viewer exposure. The benchmark never starts/stops outputs, excludes markers, and restores the source/scene; results may vary with routing and load.
+
+The datasets are small, labelled by the author, contain correlated repeated frames and are no longer unseen holdouts. Precision/recall are undefined where no positive predictions exist. No threshold, label, timeout or score was changed to improve the result.

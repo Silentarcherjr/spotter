@@ -92,6 +92,8 @@ try {
   console.log(
     JSON.stringify({
       scene: result.scene,
+      action: result.action,
+      modelPerTrialMedians: result.modelPerTrialMedians,
       analysisPerTrialMedians: result.analysisPerTrialMedians,
       unavailable: result.unavailable,
     }),

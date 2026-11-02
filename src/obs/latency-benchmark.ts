@@ -3,6 +3,7 @@ import { ObsClient } from './client.ts';
 import type { ObsConfig, ObsWire } from './client.ts';
 import { OffTheMap } from '../modules/offthemap/runtime.ts';
 import type { ResponsesAI } from '../ai/responses.ts';
+import { timedPrivacy } from '../observability/privacy-timing.ts';
 import { distribution } from '../observability/metrics.ts';
 /** Controlled local-clip benchmark. Never starts/stops stream or recording outputs. */
 export async function benchmarkLatency(
@@ -30,6 +31,7 @@ export async function benchmarkLatency(
     attempts: number;
     unavailable: number;
     confirmationFailed: number;
+    actionMs: number | null;
   }[] = [];
   try {
     const stream = await wire.call('GetStreamStatus');
@@ -64,12 +66,17 @@ export async function benchmarkLatency(
       await new Promise((resolve) => setTimeout(resolve, 250));
       await wire.call('SetMediaInputCursor', { inputName: 'Spotter IRL', mediaCursor: 4000 });
       await new Promise((resolve) => setTimeout(resolve, 500));
+      const actionTimer = timedPrivacy(
+        () => performance.now(),
+        () => obs.applyPrivacy(),
+        () => obs.confirmPrivacy(),
+      );
       const run = new OffTheMap({
         available: () => obs.connected,
         capture: () => obs.capture(),
         analyze: (image) => ai.vision(image),
-        privacy: () => obs.applyPrivacy(),
-        confirmPrivacy: () => obs.confirmPrivacy(),
+        privacy: actionTimer.privacy,
+        confirmPrivacy: actionTimer.confirm,
         restore: () => obs.restore(),
         marker: async () => {},
       });
@@ -93,6 +100,7 @@ export async function benchmarkLatency(
         attempts: stats.attempts,
         unavailable: stats.unavailable,
         confirmationFailed: stats.confirmationFailed,
+        actionMs: actionTimer.elapsed(),
       });
       progress(i + 1, stats.scene.medianMs);
       await obs.restore();
@@ -109,6 +117,10 @@ export async function benchmarkLatency(
       markerExcluded: true,
       rows,
       scene: distribution(rows.flatMap((row) => (row.sceneMs === null ? [] : [row.sceneMs]))),
+      action: distribution(rows.flatMap((row) => (row.actionMs === null ? [] : [row.actionMs]))),
+      modelPerTrialMedians: distribution(
+        rows.flatMap((row) => (row.modelMs === null ? [] : [row.modelMs])),
+      ),
       analysisPerTrialMedians: distribution(
         rows.flatMap((row) => (row.analysisMs === null ? [] : [row.analysisMs])),
       ),

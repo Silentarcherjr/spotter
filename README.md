@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**178 automated tests (178 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**179 automated tests (179 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -393,4 +393,6 @@ The inspection uses read-only OBS calls and traverses enabled scenes and groups;
 
 `PRESTREAM_MODEL` optionally selects a model only for the pre-stream check; empty defaults to `OPENAI_MODEL`. Off the Map continues using `OPENAI_MODEL`. `PRESTREAM_CONFIDENCE` controls the minimum displayed model confidence (default 0.8, inclusive).
 
-For the current local setup, `PRESTREAM_MODEL=openai/gpt-6.1-terra` was selected from the small documented comparison in [EVAL](docs/EVAL.md); this does not alter Off the Map.
+The earlier pre-stream-only comparison favored Terra on a small sample. The later full-Spotter comparison in [EVAL](docs/EVAL.md) found increased unavailable observations and lower chat recall, so the current setup retains GPT-4.1 mini for Off the Map, Chat Guard and pre-stream. No thresholds changed.
+
+The full comparison yielded 100% precision/100% recall for Terra on available sequences at 80, with one unavailable sequence versus none for mini (100%/66.7%). Terra chat precision/recall was 100%/85% versus mini 100%/100%. Terra action-to-OBS median was 13.28 ms (n=10), while capture-to-OBS median was 4.006 s versus mini 2.149 s; these endpoints differ and do not include viewer latency. See [EVAL](docs/EVAL.md) for denominators, unavailable cases and limits.
