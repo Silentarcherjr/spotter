@@ -78,3 +78,13 @@ Offline implementation does not establish the real-service definition of done. D
 - [x] Encoded local control93/538 QR frames, protected0/539, one Dismiss31/539 with later cycles protected. One blank startup frame in each recovered take; not counted as evidence. Protected sensor20 positive samples/3 actions/0 unavailable. No desktop/audio capture, AI or Twitch calls in these offline trials.
 - [x] Repeated20 real OBS latency measurements after repair: detection→scene median10.45ms,p9511.38ms; capture→scene70.03ms,p9574.79ms. Defaults/scores unchanged.
 - [ ] Repeat actual Twitch player test after transition recovery, with an independently verified visible positive control; earlier live recordings remain inconclusive.
+
+## Final live session — 2026-11-02 (partial)
+
+- [x] Pre-stream GREEN; primary OBS real stream, recorded clip labelled SIMULATED, real vision score 82, Privacy and Twitch marker; Dismiss restored Main.
+- [x] Harmless temporary blocked term held by Twitch and removed; fictional location guess recorded as `flag`, not deleted.
+- [x] SIMULATED voice energy 44, combined alert with available vision, real chat activity, and public stamina HUD observed in Twitch player.
+- [x] Both channels live and outbound raid approved by click; sender received EventSub and entered `covered`.
+- [ ] Receiver remained `home`; `Covering for` and tag back were not demonstrated in this session. Investigate persisted state and incoming raid transition before another attempt.
+- [ ] Final-session QR test and `qr:analyze-take`: no synthetic QR was staged before going live; the existing setup refuses source changes while output is active. No QR take was created in this session.
+- [x] User stopped both streams; OBS states verified and final pre-stream check GREEN. Silent local recording and numeric receipts remain in `data/takes/final/`.
