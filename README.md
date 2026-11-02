@@ -2,9 +2,9 @@
 
 ## For judges (2 minutes)
 
-[![Watch the Spotter demo](docs/media/00-youtube-thumbnail-1280x720.jpg)](VIDEO_URL)
+[![Watch the Spotter demo](docs/media/00-youtube-thumbnail-1280x720.jpg)](https://youtu.be/iL9hpO167Rc)
 
-[Watch the video](VIDEO_URL) · [Evidence checklist](docs/LIVE_CHECKLIST.md) · [Evaluation and limits](docs/EVAL.md)
+[Watch the video](https://youtu.be/iL9hpO167Rc) · [Evidence checklist](docs/LIVE_CHECKLIST.md) · [Evaluation and limits](docs/EVAL.md)
 
 - **Real Twitch + OBS:** real vision on a recorded IRL clip reached 82; Privacy appeared in the viewer's Twitch player, Twitch accepted the marker, and Dismiss restored Main. AutoMod held a harmless blocked-term test; a fictional location guess was flagged privately without deletion.
 - **Real crew raids:** outbound and return raids with `elsilentarcher` were confirmed through EventSub on October 29, including the receiver overlay. A later receiver-state regression was fixed with tests; the fix awaits live revalidation.
