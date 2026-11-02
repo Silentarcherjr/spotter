@@ -163,3 +163,6 @@ body.recording .data-provenance { margin-top: 8px; }
 body[data-page="report"].recording main { display: block; height: auto; overflow: visible; }
 body.recording .chips-title { padding-top: 1px; }
 #latency { font-size: 14px; line-height: 1.35; max-width: 285px; margin: 8px 0; }
+#qr-indicator[data-state="armed"] { color: #c5ff6b; }
+#qr-indicator[data-state="triggered"] { color: #e1b6ff; border-color: #ab7dde; }
+#qr-indicator[data-state="unavailable"] { color: #ffcb80; }

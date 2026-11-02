@@ -39,6 +39,8 @@ test('integrated QR pipeline withholds QR frames from AI and payload from API, S
     const qr=(await app.inject('/api/qr')).json();assert.equal(qr.active,true);assert.equal(scene,'Privacy');assert.equal(aiCalls,0);
     for(const path of ['/api/qr','/api/status','/api/overlay','/api/report']){const response=await app.inject(path);assert.ok(!response.body.includes(sentinel));assert.ok(!response.body.includes('data:image'));if(path==='/api/overlay')assert.ok(!/qr_guard|qrGuard|qrEvents|latency/i.test(response.body));}
     const preview=await app.inject({url:'/api/private/frame',headers:{'X-Spotter-Preview':'private-dashboard'}});assert.equal(preview.json(),null);
+    const dismissed=await app.inject({method:'POST',url:'/api/privacy/dismiss'});assert.equal(dismissed.statusCode,200);assert.equal(scene,'Main');
+    await new Promise(resolve=>setTimeout(resolve,200));const after=(await app.inject('/api/qr')).json();assert.equal(after.active,false);assert.ok(after.suppressUntil>Date.now());assert.equal(scene,'Main');
   }finally{await app.close();}
 });
 test('OBS restoration flushes delayed Main frames before exposing it again',async()=>{

@@ -55,3 +55,11 @@ Offline implementation does not establish the real-service definition of done. D
 - [ ] Upload video and prepare Devpost details, test evidence, Codex log/session ID and repository URL.
 - [ ] Repository remains private as requested. Decide access/publication explicitly when preparing the submission; no automatic visibility change was made.
 - [ ] Confirm the organizer's actual deadline/timezone against the official rules before submitting; the plan's deadline text has not been independently verified.
+
+## QR Guard — 2026-11-01
+
+- [x] Stock OBS Main render-delay500ms / undelayed child topology verified with8 color transitions; no third-party plugin. Capture1280px n50 and real QR capture→scene n20 measured separately.
+- [x] Local geometry-only detector, pure K/N/M/Dismiss policy, privacy ownership, fail-soft handling and payload-exclusion regressions. Default real path150ms,1 hit,~2s clean recovery; Off the Map score/thresholds untouched.
+- [x] Development evaluation32/36 positive cases,0/24 IRL false positives; tiny/rotated misses and same-set tuning disclosed in EVAL.md. Private QR indicator/latency and generic audit implemented; public UI unchanged.
+- [ ] Twitch player proof with protected/control/rearmed windows and actual stream marker. Primary stream must be started by user; do not infer viewer protection from OBS command timing.
+- [ ] Valid private dashboard+player video. Secondary browser and diagnostic movie were black, so excluded as evidence. Blank-composition recording refusal tested; native single-window fallback prepared, awaiting unlocked Mac for verification.

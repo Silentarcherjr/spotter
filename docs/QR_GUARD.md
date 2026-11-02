@@ -1,6 +1,6 @@
 # QR Guard — feasibility before implementation
 
-Status 2026-11-01: real OBS feasibility verified after the user opened OBS. No QR detector, automatic QR decision path or QR-related OBS configuration is enabled. Off the Map scores/thresholds are unchanged.
+Status 2026-11-01: real OBS feasibility, detector, tested decision path and performance measurements are complete. Twitch player proof remains pending. The phase1 notes below describe the original investigation; the implementation now enables QR Guard by default in real OBS mode. Off the Map scores/thresholds are unchanged.
 
 The official [OBS Render Delay guide](https://obsproject.com/kb/render-delay-filter/) describes a video-rendering delay. The [stock filter implementation](https://github.com/obsproject/obs-studio/blob/master/plugins/obs-filters/gpu-delay.c) exposes delay_ms from0 to500ms. This delays video, not automatically the matching audio; any final setup needs an audio-sync check.
 
@@ -18,7 +18,7 @@ Run npm run qr:obs-probe with OBS open, its WebSocket enabled and streaming/reco
 
 A positive lead would establish a useful source/scene separation in the controlled probe, not a prevention guarantee. Final QR protection must account for the phase until the next capture, screenshot completion, image preprocessing, detection, code decision, OBS RPC and the actual transition cut point. Detection→scene latency alone omits earlier costs. A fade can still expose buffered frames after a scene-assignment acknowledgement. Final evidence must compare the entire path against the observed buffer delay and verify pixels in the real Twitch player.
 
-Pending: real source/scene separation and timing results; explicit approval for any detector dependency; detection-only API review (discarding decoded text is not equivalent to never decoding); deterministic QR decision tests; action ownership with Off the Map; local accuracy/latency evaluation; real stream/player test. The user will be asked to start streaming only when those checks are ready. Privacy/public overlay will not identify the QR reason.
+Original phase1 plan (now completed except for the stream/player test): source/scene separation and timing; dependency approval; detection-only API review; deterministic decision tests; privacy ownership; accuracy/latency evaluation; real stream/player test. The user will be asked to start streaming only when those checks are ready. Privacy/public overlay will not identify the QR reason.
 
 ## Phase1 measured result (2026-11-01 Panama)
 
@@ -26,7 +26,7 @@ OBS33.0.0 / obs-websocket5.7.6 accepted gpu_delay on Main, enabled at500ms. An u
 
 Original scene Privacy restored; temporary source/filter removed; no output started/stopped. Evidence is numeric-only in ignored data/takes/qr-guard/obs-probe.json. Candidate design proceeds with delay on Main and capture of the undelayed child; do not put the render delay on the child used by the detector. The remaining total budget must include capture phase/processing and an effective privacy cut. No claim that QR never reaches Twitch is made at this stage.
 
-## Phase3 implementation (measurement and player proof still pending)
+## Phase3 implementation (player proof still pending)
 
 QR_GUARD defaults1 for real OBS mode; SIM does not enable this real detector. Source defaults to QR_GUARD_SOURCE, then OBS_SOURCE, then Spotter IRL. Defaults:150ms loop, K1/N3, M=ceil(2000/interval)=14 consecutive clean captures (~2.1s), Dismiss grace5000ms, expected Main delay500ms, capture1280px. See .env.example. One hit is enough; capture gaps/failures reset clean recovery. Missing images yield QR Guard unavailable and no new QR actions. No QR score is added to Off the Map.
 
@@ -37,3 +37,11 @@ A tested shared privacy lease prevents QR clean recovery or QR Dismiss from undo
 Private API /api/qr exposes only status, numeric timing and generic qr_guard audit outcomes/marker receipt. /api/qr/dismiss handles the explicit override. Public overlay payload remains closed and contains none of these fields. Integrated regression uses a secret-looking fictitious QR payload and verifies it is absent from logs/SQL projection/status/report/overlay; payload decoder/reader modules are never loaded. Capture/detector errors have static unavailable state, never raw errors or images.
 
 Fast-loop images never go to AI. Independent slow vision gets a separate local QR preflight on its own frame and withholds locally detected codes; it also pauses while QR protection owns Privacy. A QR-only availability failure does not disable otherwise working Off the Map vision, but known QR frames are still withheld. A code missed by the local detector cannot be guaranteed absent from a separate vision frame; detector coverage is evaluated next. No QR-related content is intentionally sent to a model.
+
+## Measured path and private UI
+
+See docs/EVAL.md for the controlled n20 OBS timings and development-set accuracy, including missed tiny/rotated codes. Detection→confirmed scene median6.45ms/p958.03ms; capture→confirmed scene median82.46ms/p9591.28ms. These omit sampling phase and are not proof of final player pixels.
+
+Only the private dashboard shows QR state, generic audit events and last latency. Its common Dismiss button releases all currently active protection owners; the explicit QR Dismiss endpoint releases only QR. Public overlay and Privacy content contain no QR indicator/reason.
+
+The secondary evidence browser produced a black image during offline preparation, including a short diagnostic recording. That file is not accepted as evidence. The recorder now rejects blank compositions before StartRecord; a built-in ScreenCaptureKit fallback can target only the uniquely named Chrome proof window. No desktop capture or stream-service settings read is used. The Mac was locked at the next verification attempt; player verification and final evidence remain pending unlock and an explicitly started primary stream.

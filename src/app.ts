@@ -173,8 +173,8 @@ export function createApp(options: { databasePath: string; simulated: boolean; v
     await obs.start(); qrSensor?.start(); return { connected: obs.connected };
   });
   app.post('/api/privacy/dismiss', async (_request, reply) => {
-    if (!offthemap) return reply.code(503).send({ error: 'Privacy integration unavailable' });
-    try { await offthemap.dismiss(); return { dismissed: true }; }
+    if (!offthemap&&!qr) return reply.code(503).send({ error: 'Privacy integration unavailable' });
+    try { if(qr?.snapshot().active)await qr.dismiss(); if(offthemap&&(offthemap.snapshot().privacyActive||offthemap.snapshot().exposure.active))await offthemap.dismiss(); return { dismissed: true }; }
     catch { return reply.code(503).send({ error: 'Restore unavailable; retry when OBS reconnects' }); }
   });
   app.post<{ Body: { term: string } }>('/api/terms', { schema: { body: { type: 'object', additionalProperties: false, required: ['term'], properties: { term: { type: 'string', minLength: 2, maxLength: 500 } } } } }, async (request, reply) => {
