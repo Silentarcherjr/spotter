@@ -88,3 +88,5 @@ Offline implementation does not establish the real-service definition of done. D
 - [ ] Receiver remained `home`; `Covering for` and tag back were not demonstrated in this session. Investigate persisted state and incoming raid transition before another attempt.
 - [ ] Final-session QR test and `qr:analyze-take`: no synthetic QR was staged before going live; the existing setup refuses source changes while output is active. No QR take was created in this session.
 - [x] User stopped both streams; OBS states verified and final pre-stream check GREEN. Silent local recording and numeric receipts remain in `data/takes/final/`.
+
+- [ ] Follow-up QR live take (2026-11-02): real triggers and markers observed; 16,546 recorded frames analyzed, but zero QR detections including the Dismiss positive control. Viewer-side result inconclusive; do not mark the final QR proof complete. Evidence and analysis remain in `data/takes/final/`.
