@@ -36,7 +36,9 @@
     "qr:setup": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-setup.ts",
     "qr:program-proof": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-program-proof.ts",
     "qr:analyze-take": "node --experimental-strip-types scripts/qr-analyze-take.ts",
-    "golive:check": "node --experimental-strip-types --env-file-if-exists=.env scripts/golive-check.ts"
+    "golive:check": "node --experimental-strip-types --env-file-if-exists=.env scripts/golive-check.ts",
+    "format": "prettier --write '{src,test,scripts,shared,dashboard,overlay,sensor,privacy}/**/*.{ts,css,html}'",
+    "format:check": "prettier --check '{src,test,scripts,shared,dashboard,overlay,sensor,privacy}/**/*.{ts,css,html}'"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",
@@ -49,6 +51,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/pngjs": "^6.0.5",
+    "prettier": "^3.9.10",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"
   }

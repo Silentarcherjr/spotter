@@ -6,7 +6,16 @@ import { FeatureWindow } from '../sensor/features.ts';
 import { advanceRally, initialRally, sessionReport } from '../src/core/session.ts';
 import { calibrate } from '../src/core/energy.ts';
 
-const features = (at: number) => ({ at, rms: .2, pitchMedian: 150, pitchRange: 50, spectralSlope: -2, voicedRatio: .7, pauseLength: .2, speechRate: 3 });
+const features = (at: number) => ({
+  at,
+  rms: 0.2,
+  pitchMedian: 150,
+  pitchRange: 50,
+  spectralSlope: -2,
+  voicedRatio: 0.7,
+  pauseLength: 0.2,
+  speechRate: 3,
+});
 
 test('numeric sensor contract rejects audio, extra fields, invalid numbers and stale timestamps', () => {
   assert.deepEqual(parseNumericFeatures(features(1_000), 1_000), features(1_000));
@@ -22,14 +31,19 @@ test('calibration cannot complete with sparse samples separated by ten minutes',
 
 test('audio extraction recognizes a tone locally and emits only numeric features', () => {
   const window = new FeatureWindow(2048, 48_000);
-  const tone = Float32Array.from({ length: 2048 }, (_, index) => .2 * Math.sin(2 * Math.PI * 150 * index / 48_000));
+  const tone = Float32Array.from(
+    { length: 2048 },
+    (_, index) => 0.2 * Math.sin((2 * Math.PI * 150 * index) / 48_000),
+  );
   const spectrum = new Float32Array(1024).fill(-60);
   for (let index = 0; index < 40; index++) window.push(tone, spectrum, index * 25);
   const packet = window.flush(1_000);
   assert.ok(packet);
   assert.ok(Math.abs(packet.pitchMedian - 150) < 3);
-  assert.ok(packet.voicedRatio > .9);
-  assert.ok(Object.values(packet).every((value) => typeof value === 'number' && Number.isFinite(value)));
+  assert.ok(packet.voicedRatio > 0.9);
+  assert.ok(
+    Object.values(packet).every((value) => typeof value === 'number' && Number.isFinite(value)),
+  );
 });
 
 test('Second Wind saves a personal baseline, reports missing sensor honestly and keeps rally separate', () => {
@@ -47,7 +61,9 @@ test('Second Wind saves a personal baseline, reports missing sensor honestly and
     assert.ok(module.report().samples > 0);
     module.resetCalibration();
     assert.equal(module.snapshot(600_000).calibration, 0);
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 });
 
 test('rally dedupes messages and report uses this session numeric data only', () => {
@@ -58,7 +74,10 @@ test('rally dedupes messages and report uses this session numeric data only', ()
   assert.equal(rally.meter, 0);
   assert.ok(rally.celebratingUntil > 0);
   assert.equal(sessionReport([]).peak, null);
-  const report = sessionReport([{ at: 0, energy: 80, chat: 10 }, { at: 1, energy: 40, chat: 5 }]);
+  const report = sessionReport([
+    { at: 0, energy: 80, chat: 10 },
+    { at: 1, energy: 40, chat: 5 },
+  ]);
   assert.equal(report.peak?.at, 0);
   assert.equal(report.low?.at, 1);
 });
@@ -69,7 +88,11 @@ test('WebSocket accepts one numeric packet and closes raw-audio packets', async 
   const app = createApp({ databasePath: ':memory:', simulated: false });
   await app.ready();
   try {
-    await assert.rejects(app.injectWS('/api/sensor', { headers: { host: '127.0.0.1:3210', origin: 'https://foreign.example' } }));
+    await assert.rejects(
+      app.injectWS('/api/sensor', {
+        headers: { host: '127.0.0.1:3210', origin: 'https://foreign.example' },
+      }),
+    );
     const socket = await app.injectWS('/api/sensor', { headers: { host: '127.0.0.1:3210' } });
     const accepted = once(socket, 'message');
     socket.send(JSON.stringify(features(Date.now())));
@@ -83,7 +106,9 @@ test('WebSocket accepts one numeric packet and closes raw-audio packets', async 
     const status = (await app.inject('/api/status')).json();
     assert.equal(status.sensorStatus, 'available');
     assert.equal(status.energy, null);
-  } finally { await app.close(); }
+  } finally {
+    await app.close();
+  }
 });
 
 test('file audio uses an isolated simulated baseline without switching real integrations into demo mode', () => {
@@ -93,10 +118,13 @@ test('file audio uses an isolated simulated baseline without switching real inte
     for (let i = 0; i <= 600; i++) module.receive(features(i * 1000));
     module.selectSource('file');
     assert.equal(module.snapshot(600_000).calibrated, false);
-    for (let i = 0; i <= 600; i++) module.receive({ ...features(700_000 + i * 1000), rms: .4 });
+    for (let i = 0; i <= 600; i++) module.receive({ ...features(700_000 + i * 1000), rms: 0.4 });
     const file = module.snapshot(1_300_000);
-    assert.equal(file.simulated, false); assert.equal(file.audioSimulated, true); assert.equal(file.audioSource, 'file');
-    assert.equal(file.calibrated, true); assert.equal(file.energy, 75);
+    assert.equal(file.simulated, false);
+    assert.equal(file.audioSimulated, true);
+    assert.equal(file.audioSource, 'file');
+    assert.equal(file.calibrated, true);
+    assert.equal(file.energy, 75);
     module.selectSource('microphone');
     module.receive(features(1_301_000));
     assert.equal(module.snapshot(1_301_000).audioSimulated, false);
@@ -106,34 +134,52 @@ test('file audio uses an isolated simulated baseline without switching real inte
     module.resetCalibration();
     module.selectSource('microphone');
     assert.equal(module.snapshot(1_301_000).calibrated, true);
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 });
 
 test('file sensor accepts only numeric features and marks the public HUD simulated even when disabled', async () => {
-  const { createApp } = await import('../src/app.ts'); const { once } = await import('node:events');
+  const { createApp } = await import('../src/app.ts');
+  const { once } = await import('node:events');
   const app = createApp({ databasePath: ':memory:', simulated: false });
   try {
     await app.ready();
-    await assert.rejects(app.injectWS('/api/sensor?source=unknown', { headers: { host: '127.0.0.1:3210' } }));
-    const socket = await app.injectWS('/api/sensor?source=file', { headers: { host: '127.0.0.1:3210' } });
-    const ack = once(socket, 'message'); socket.send(JSON.stringify(features(Date.now()))); await ack;
+    await assert.rejects(
+      app.injectWS('/api/sensor?source=unknown', { headers: { host: '127.0.0.1:3210' } }),
+    );
+    const socket = await app.injectWS('/api/sensor?source=file', {
+      headers: { host: '127.0.0.1:3210' },
+    });
+    const ack = once(socket, 'message');
+    socket.send(JSON.stringify(features(Date.now())));
+    await ack;
     const status = (await app.inject('/api/status')).json();
-    assert.equal(status.simulated, false); assert.equal(status.audioSimulated, true); assert.equal(status.audioSource, 'file');
+    assert.equal(status.simulated, false);
+    assert.equal(status.audioSimulated, true);
+    assert.equal(status.audioSource, 'file');
     assert.equal((await app.inject('/api/overlay')).json().simulated, true);
     await app.inject({ method: 'POST', url: '/api/hud', payload: { enabled: true } });
-    const hud = (await app.inject('/api/overlay')).json(); assert.equal(hud.simulated, true); assert.equal(hud.enabled, true);
+    const hud = (await app.inject('/api/overlay')).json();
+    assert.equal(hud.simulated, true);
+    assert.equal(hud.enabled, true);
     assert.doesNotMatch(JSON.stringify(hud), /clues|exposure|audio/);
     socket.terminate();
-  } finally { await app.close(); }
+  } finally {
+    await app.close();
+  }
 });
 
 test('calibration completes with normal packet jitter instead of trimming its first sample too early', () => {
   const db = new DatabaseSync(':memory:');
   try {
-    const module = new SecondWind(db); module.selectSource('file');
+    const module = new SecondWind(db);
+    module.selectSource('file');
     for (let i = 0; i <= 610; i++) module.receive(features(i * 1003));
     assert.equal(module.snapshot(610 * 1003).calibrated, true);
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 });
 
 test('live status publishes the configured energy alert threshold and rejects invalid configuration', async () => {
@@ -143,6 +189,10 @@ test('live status publishes the configured energy alert threshold and rejects in
     const status = (await app.inject('/api/status')).json();
     assert.equal(status.energyAlertThreshold, 50);
     assert.equal(status.combinedAlert, false);
-  } finally { await app.close(); }
-  assert.throws(() => createApp({ databasePath: ':memory:', simulated: false, energyAlertThreshold: 101 }));
+  } finally {
+    await app.close();
+  }
+  assert.throws(() =>
+    createApp({ databasePath: ':memory:', simulated: false, energyAlertThreshold: 101 }),
+  );
 });

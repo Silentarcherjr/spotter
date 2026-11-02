@@ -420,3 +420,8 @@
 
 - Added docs/FINAL_TEST.md: a single approximately45-minute sequence covering pre-check, real vision/Privacy/marker/Dismiss, QR with positive control, Chat Guard, simulated voice and combined alert, approved two-way raids and final post-stream check. Every step specifies evidence and safe abort; prerequisites include viewer/raid policy and VOD. This is a plan only: no Twitch or OBS live action was performed in this phase.
 - Prior implementation validation: 176 tests pass, typecheck, lint and build pass. No source changes in this documentation phase.
+
+## 2026-11-02 — Formatting-only Prettier pass
+
+- User approved Prettier as a development dependency and requested formatting only. Added .prettierrc (printWidth 100, singleQuote and semi), format and format:check scripts, and formatted TypeScript, CSS and HTML in src/, test/, scripts/, shared/, dashboard/, overlay/, sensor/ and privacy/. No logic edited by hand; package.json and package-lock.json record the approved dependency and scripts.
+- Prettier's first pass on src/app.ts required a second automatic pass before its own check was stable. No tests added or removed: 176/176 pass, 0 skipped; format:check, typecheck, lint and build all pass. No live OBS/Twitch work performed.

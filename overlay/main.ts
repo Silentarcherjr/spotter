@@ -2,7 +2,15 @@ import '../shared/style.css';
 import './style.css';
 import { animateNumber, relayMarkup, renderRelay } from '../shared/motion.ts';
 
-interface PublicHud { enabled: boolean; simulated: boolean; energy?: number | null; phase?: string; returning?: boolean; coveringFor?: string | null; rally?: { meter: number; celebrating: boolean } }
+interface PublicHud {
+  enabled: boolean;
+  simulated: boolean;
+  energy?: number | null;
+  phase?: string;
+  returning?: boolean;
+  coveringFor?: string | null;
+  rally?: { meter: number; celebrating: boolean };
+}
 const recordedInput = new URLSearchParams(window.location.search).get('recorded') === '1';
 const app = document.getElementById('app')!;
 document.body.dataset.page = 'overlay';
@@ -13,23 +21,41 @@ async function refresh(): Promise<void> {
   try {
     const response = await fetch('/api/overlay');
     if (!response.ok) throw new Error('Unavailable');
-    const state = await response.json() as PublicHud;
+    const state = (await response.json()) as PublicHud;
     element('simulated').hidden = !(state.simulated || recordedInput);
     element('hud-content').hidden = !state.enabled;
     if (!state.enabled) return;
-    const energy = typeof state.energy === 'number' && Number.isFinite(state.energy) ? Math.max(0, Math.min(100, state.energy)) : null;
+    const energy =
+      typeof state.energy === 'number' && Number.isFinite(state.energy)
+        ? Math.max(0, Math.min(100, state.energy))
+        : null;
     animateNumber(element('energy'), energy);
     (element('energy-meter') as HTMLMeterElement).value = energy ?? 0;
     element('stamina-fill').style.width = `${energy ?? 0}%`;
-    element('hud-content').dataset.energy = energy === null ? 'unavailable' : energy <= 30 ? 'low' : 'available';
+    element('hud-content').dataset.energy =
+      energy === null ? 'unavailable' : energy <= 30 ? 'low' : 'available';
     element('rally-fill').style.width = `${state.rally?.meter ?? 0}%`;
     element('rally-value').textContent = `${state.rally?.meter ?? 0}%`;
     element('celebration').hidden = !state.rally?.celebrating;
     element('rally-label').textContent = state.rally?.celebrating ? 'RALLY COMPLETE' : 'RALLY';
     renderRelay(app.querySelector('.relay-track'), state.phase ?? 'idle', state.returning);
-    const labels: Record<string, string> = { idle: 'Crew link ready', suggested: 'Ready for a handoff', confirming: 'Requesting handoff…', raiding: 'Handoff in progress…', covered: 'Community received', 'tag-back': 'Return handoff ready', home: 'Welcome home' };
-    element('raid-phase').textContent = state.coveringFor ? `Covering for ${state.coveringFor}’s community` : labels[state.phase ?? 'idle'] ?? 'Crew link ready';
-  } catch { element('hud-content').hidden = true; }
+    const labels: Record<string, string> = {
+      idle: 'Crew link ready',
+      suggested: 'Ready for a handoff',
+      confirming: 'Requesting handoff…',
+      raiding: 'Handoff in progress…',
+      covered: 'Community received',
+      'tag-back': 'Return handoff ready',
+      home: 'Welcome home',
+    };
+    element('raid-phase').textContent = state.coveringFor
+      ? `Covering for ${state.coveringFor}’s community`
+      : (labels[state.phase ?? 'idle'] ?? 'Crew link ready');
+  } catch {
+    element('hud-content').hidden = true;
+  }
 }
 void refresh();
-setInterval(() => { void refresh(); }, 1000);
+setInterval(() => {
+  void refresh();
+}, 1000);

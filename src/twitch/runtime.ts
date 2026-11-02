@@ -14,39 +14,59 @@ export class TwitchRuntime {
   private validation: ReturnType<typeof setInterval> | undefined;
   private chats: ChatActivity[] = [];
   private names = new Map<string, string>();
-  displayName(id: string): string { return this.names.get(id) ?? id; }
+  displayName(id: string): string {
+    return this.names.get(id) ?? id;
+  }
   private nameLookups = new Map<string, Promise<string | null>>();
   private nameRetry = new Map<string, number>();
   async resolveDisplayName(id: string): Promise<string | null> {
     if (this.names.has(id)) return this.names.get(id)!;
     if ((this.nameRetry.get(id) ?? 0) > Date.now()) return null;
-    const pending = this.nameLookups.get(id); if (pending) return pending;
+    const pending = this.nameLookups.get(id);
+    if (pending) return pending;
     const lookup = (async () => {
       try {
-        const user = (await this.helix.users(id)).data.find(user => user.id === id);
-        if (user?.display_name) { this.names.set(id, user.display_name.slice(0, 100)); return this.names.get(id)!; }
-      } catch { /* No numeric identifier on the public overlay when lookup is unavailable. */ }
-      this.nameRetry.set(id, Date.now() + 30_000); return null;
+        const user = (await this.helix.users(id)).data.find((user) => user.id === id);
+        if (user?.display_name) {
+          this.names.set(id, user.display_name.slice(0, 100));
+          return this.names.get(id)!;
+        }
+      } catch {
+        /* No numeric identifier on the public overlay when lookup is unavailable. */
+      }
+      this.nameRetry.set(id, Date.now() + 30_000);
+      return null;
     })();
     this.nameLookups.set(id, lookup);
-    try { return await lookup; } finally { this.nameLookups.delete(id); }
+    try {
+      return await lookup;
+    } finally {
+      this.nameLookups.delete(id);
+    }
   }
   private online = false;
   private status = 'authorization required';
   private connected = false;
   private closed = false;
   private raidHandler: ((from: string, to: string, at: number) => void) | null = null;
-  setRaidHandler(handler: (from: string, to: string, at: number) => void): void { this.raidHandler = handler; }
+  setRaidHandler(handler: (from: string, to: string, at: number) => void): void {
+    this.raidHandler = handler;
+  }
   private activityHandler: ((id: string, at: number, userId: string) => void) | null = null;
-  setActivityHandler(handler: (id: string, at: number, userId: string) => void): void { this.activityHandler = handler; }
+  setActivityHandler(handler: (id: string, at: number, userId: string) => void): void {
+    this.activityHandler = handler;
+  }
   private chatHandler: ((id: string, message: string, at: number) => Promise<void>) | null = null;
-  setChatHandler(handler: (id: string, message: string, at: number) => Promise<void>): void { this.chatHandler = handler; }
+  setChatHandler(handler: (id: string, message: string, at: number) => Promise<void>): void {
+    this.chatHandler = handler;
+  }
   constructor(database: DatabaseSync, config: TwitchConfig) {
     this.auth = new TwitchAuth(database, config);
     this.helix = new Helix(config.clientId, () => this.auth.accessToken(), config.fetcher);
   }
   async start(): Promise<void> {
-    this.stop(); this.closed = false;
+    this.stop();
+    this.closed = false;
     if (!this.auth.identity) return;
     try {
       await this.auth.validate();
@@ -55,36 +75,92 @@ export class TwitchRuntime {
       this.online = streams.data.some((stream) => stream.user_id === id && stream.type === 'live');
       if (this.closed) return;
       this.client = new EventSubClient({
-        subscribe: async (session) => { await Promise.all(subscriptions(id, id).map((subscription) => this.helix.subscribe(session, subscription))); },
-        onStatus: (status) => { this.status = status; this.connected = status === 'connected'; },
+        subscribe: async (session) => {
+          await Promise.all(
+            subscriptions(id, id).map((subscription) =>
+              this.helix.subscribe(session, subscription),
+            ),
+          );
+        },
+        onStatus: (status) => {
+          this.status = status;
+          this.connected = status === 'connected';
+        },
         onEvent: (event) => this.receive(event),
       });
       this.client.start();
-      this.validation = setInterval(() => { void this.auth.validate().catch(() => { this.status = 'authorization unavailable'; this.client?.stop(); this.connected = false; }); }, 3_600_000);
+      this.validation = setInterval(() => {
+        void this.auth.validate().catch(() => {
+          this.status = 'authorization unavailable';
+          this.client?.stop();
+          this.connected = false;
+        });
+      }, 3_600_000);
       this.validation.unref();
-    } catch { this.status = 'Twitch unavailable · reconnect authorization'; this.connected = false; }
+    } catch {
+      this.status = 'Twitch unavailable · reconnect authorization';
+      this.connected = false;
+    }
   }
   // Store activity IDs only. Raw message text stays ephemeral and never reaches logs or the dashboard.
   receive(notification: TwitchNotification): void {
     const id = this.auth.identity?.userId;
     const event = notification.event;
-    if (notification.type === 'channel.chat.message' && event.broadcaster_user_id === id && typeof event.message_id === 'string' && typeof event.chatter_user_id === 'string') {
+    if (
+      notification.type === 'channel.chat.message' &&
+      event.broadcaster_user_id === id &&
+      typeof event.message_id === 'string' &&
+      typeof event.chatter_user_id === 'string'
+    ) {
       this.activityHandler?.(event.message_id, notification.at, event.chatter_user_id);
       const content = event.message as { text?: unknown } | undefined;
-      if (typeof content?.text === 'string' && this.chatHandler) void this.chatHandler(event.message_id, content.text, notification.at).catch(() => {});
-      this.chats = [...this.chats.filter((chat) => notification.at - chat.at <= 60_000), { id: event.message_id, userId: event.chatter_user_id, at: notification.at }].slice(-10_000);
+      if (typeof content?.text === 'string' && this.chatHandler)
+        void this.chatHandler(event.message_id, content.text, notification.at).catch(() => {});
+      this.chats = [
+        ...this.chats.filter((chat) => notification.at - chat.at <= 60_000),
+        { id: event.message_id, userId: event.chatter_user_id, at: notification.at },
+      ].slice(-10_000);
     }
-    if (notification.type === 'channel.raid' && typeof event.from_broadcaster_user_id === 'string' && typeof event.to_broadcaster_user_id === 'string') {
-      if (typeof event.from_broadcaster_user_name === 'string') this.names.set(event.from_broadcaster_user_id, event.from_broadcaster_user_name);
+    if (
+      notification.type === 'channel.raid' &&
+      typeof event.from_broadcaster_user_id === 'string' &&
+      typeof event.to_broadcaster_user_id === 'string'
+    ) {
+      if (typeof event.from_broadcaster_user_name === 'string')
+        this.names.set(event.from_broadcaster_user_id, event.from_broadcaster_user_name);
       if (this.names.size > 100) this.names.delete(this.names.keys().next().value!);
-      this.raidHandler?.(event.from_broadcaster_user_id, event.to_broadcaster_user_id, notification.at);
+      this.raidHandler?.(
+        event.from_broadcaster_user_id,
+        event.to_broadcaster_user_id,
+        notification.at,
+      );
     }
-    if (notification.type === 'stream.online' && event.broadcaster_user_id === id) this.online = true;
-    if (notification.type === 'stream.offline' && event.broadcaster_user_id === id) this.online = false;
+    if (notification.type === 'stream.online' && event.broadcaster_user_id === id)
+      this.online = true;
+    if (notification.type === 'stream.offline' && event.broadcaster_user_id === id)
+      this.online = false;
   }
   snapshot(now = Date.now()) {
-    return { configured: true, connected: this.connected, status: this.status, broadcasterId: this.auth.identity?.userId ?? null, live: this.connected ? this.online : null, chat: chatVelocity(this.chats, now) };
+    return {
+      configured: true,
+      connected: this.connected,
+      status: this.status,
+      broadcasterId: this.auth.identity?.userId ?? null,
+      live: this.connected ? this.online : null,
+      chat: chatVelocity(this.chats, now),
+    };
   }
-  stop(): void { this.closed = true; clearInterval(this.validation); this.client?.stop(); this.client = null; this.connected = false; }
-  disconnect(): void { this.stop(); this.auth.clear(); this.chats = []; this.status = 'authorization required'; }
+  stop(): void {
+    this.closed = true;
+    clearInterval(this.validation);
+    this.client?.stop();
+    this.client = null;
+    this.connected = false;
+  }
+  disconnect(): void {
+    this.stop();
+    this.auth.clear();
+    this.chats = [];
+    this.status = 'authorization required';
+  }
 }

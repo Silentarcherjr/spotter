@@ -3,14 +3,22 @@ import { drawTelemetry, correlationText, TelemetrySelection, elapsedTime } from 
 import { animateNumber, relayMarkup, renderRelay } from './motion.ts';
 import type { DemoSession } from '../src/sim/session.ts';
 
-type QrView={enabled:boolean;status:string;active?:boolean;lastLatency?:{captureToSceneMs:number;decisionToSceneMs:number}|null;suppressUntil?:number};
+type QrView = {
+  enabled: boolean;
+  status: string;
+  active?: boolean;
+  lastLatency?: { captureToSceneMs: number; decisionToSceneMs: number } | null;
+  suppressUntil?: number;
+};
 type Snapshot = ReturnType<DemoSession['snapshot']>;
 const app = document.querySelector<HTMLElement>('#app')!;
 const page = window.location.pathname.split('/')[1] ?? 'dashboard';
 document.body.dataset.page = page;
-if (new URLSearchParams(location.search).get('record') === '1') document.body.classList.add('recording');
+if (new URLSearchParams(location.search).get('record') === '1')
+  document.body.classList.add('recording');
 const badge = '<strong class="badge" id="simulated" hidden>SIMULATED</strong>';
-const links = '<nav><a href="/dashboard/">Dashboard</a><a href="/dashboard/report.html">Report</a><a href="/sensor/">Sensor</a><a href="/overlay/" target="_blank">OBS overlay ↗</a></nav>';
+const links =
+  '<nav><a href="/dashboard/">Dashboard</a><a href="/dashboard/report.html">Report</a><a href="/sensor/">Sensor</a><a href="/overlay/" target="_blank">OBS overlay ↗</a></nav>';
 if (page === 'dashboard') {
   app.innerHTML = `<header class="masthead"><a class="wordmark" href="/dashboard/"><span class="brand-mark">S</span>spotter<span class="dot">●</span></a>${links}<span class="private-pill">◉ PRIVATE CONTROL ROOM</span>${badge}</header>
     <section class="intro"><div><span class="eyebrow">Most Twitch tools watch the chat.</span><h1>On your <em>six.</em></h1><p>A safety net, not a guarantee.</p></div><div class="session-meta"><span id="connection" class="connection">Connecting…</span><div class="demo-controls"><a id="twitch-connect" href="/api/twitch/connect" hidden>Connect with Twitch ↗</a><button id="reset" class="secondary" hidden>↻ Replay demo</button></div></div></section>
@@ -28,45 +36,129 @@ if (page === 'dashboard') {
 }
 if (page === 'sensor') void import('../sensor/main.ts');
 const element = (id: string) => document.getElementById(id);
-const text = (id: string, value: string) => { const target = element(id); if (target) target.textContent = value; };
-const hidden = (id: string, value: boolean) => { const target = element(id); if (target) target.hidden = value; };
-const meter = (id: string, value: number) => { const target = element(id) as HTMLMeterElement | null; if (target) target.value = value; };
+const text = (id: string, value: string) => {
+  const target = element(id);
+  if (target) target.textContent = value;
+};
+const hidden = (id: string, value: boolean) => {
+  const target = element(id);
+  if (target) target.hidden = value;
+};
+const meter = (id: string, value: number) => {
+  const target = element(id) as HTMLMeterElement | null;
+  if (target) target.value = value;
+};
 let busy = false;
 let isSimulated = false;
 let latestState: Snapshot | null = null;
-const selection = page === 'dashboard' ? new TelemetrySelection(element('take-select') as HTMLSelectElement, () => { if (latestState) chart(latestState); }) : null;
+const selection =
+  page === 'dashboard'
+    ? new TelemetrySelection(element('take-select') as HTMLSelectElement, () => {
+        if (latestState) chart(latestState);
+      })
+    : null;
 async function post(path: string, payload?: unknown, method = 'POST'): Promise<void> {
   if (busy) return;
   busy = true;
   try {
-    const response = await fetch(path, { method, ...(payload ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}) });
+    const response = await fetch(path, {
+      method,
+      ...(payload
+        ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+        : {}),
+    });
     if (!response.ok) throw new Error('Action unavailable');
     await refresh();
-  } catch { text('error', 'Action unavailable. Try again.'); hidden('error', false); }
-  finally { busy = false; }
+  } catch {
+    text('error', 'Action unavailable. Try again.');
+    hidden('error', false);
+  } finally {
+    busy = false;
+  }
 }
-for (const [id, action] of [['request-relay', 'request'], ['approve', 'approve'], ['cancel', 'cancel'], ['back', 'requestBack'], ['dismiss', 'dismiss'], ['reset', 'reset']]) {
-  if (id && action) element(id)?.addEventListener('click', () => { void post(isSimulated ? `/api/demo/${action}` : action === 'dismiss' ? '/api/privacy/dismiss' : `/api/relay/${action}`); });
+for (const [id, action] of [
+  ['request-relay', 'request'],
+  ['approve', 'approve'],
+  ['cancel', 'cancel'],
+  ['back', 'requestBack'],
+  ['dismiss', 'dismiss'],
+  ['reset', 'reset'],
+]) {
+  if (id && action)
+    element(id)?.addEventListener('click', () => {
+      void post(
+        isSimulated
+          ? `/api/demo/${action}`
+          : action === 'dismiss'
+            ? '/api/privacy/dismiss'
+            : `/api/relay/${action}`,
+      );
+    });
 }
-element('prestream-recheck')?.addEventListener('click',async()=>{const button=element('prestream-recheck') as HTMLButtonElement;button.disabled=true;text('prestream-level','CHECKING');try{const response=await fetch('/api/prestream',{method:'POST'});if(!response.ok)throw Error();const value=await response.json() as {level:string;findings:string[];simulated:boolean};element('prestream-panel')!.dataset.level=value.level;text('prestream-level',value.level.toUpperCase()+(value.simulated?' · SIMULATED':''));text('prestream-findings',value.findings.length?value.findings.join(' · '):'No obvious issues detected.');}catch{element('prestream-panel')!.dataset.level='amber';text('prestream-level','AMBER');text('prestream-findings','analysis unavailable');}finally{button.disabled=false;}});
-element('recalibrate')?.addEventListener('click', () => { void post('/api/calibration/reset'); });
-element('hud')?.addEventListener('change', (event) => { void post('/api/hud', { enabled: (event.target as HTMLInputElement).checked }); });
+element('prestream-recheck')?.addEventListener('click', async () => {
+  const button = element('prestream-recheck') as HTMLButtonElement;
+  button.disabled = true;
+  text('prestream-level', 'CHECKING');
+  try {
+    const response = await fetch('/api/prestream', { method: 'POST' });
+    if (!response.ok) throw Error();
+    const value = (await response.json()) as {
+      level: string;
+      findings: string[];
+      simulated: boolean;
+    };
+    element('prestream-panel')!.dataset.level = value.level;
+    text('prestream-level', value.level.toUpperCase() + (value.simulated ? ' · SIMULATED' : ''));
+    text(
+      'prestream-findings',
+      value.findings.length ? value.findings.join(' · ') : 'No obvious issues detected.',
+    );
+  } catch {
+    element('prestream-panel')!.dataset.level = 'amber';
+    text('prestream-level', 'AMBER');
+    text('prestream-findings', 'analysis unavailable');
+  } finally {
+    button.disabled = false;
+  }
+});
+element('recalibrate')?.addEventListener('click', () => {
+  void post('/api/calibration/reset');
+});
+element('hud')?.addEventListener('change', (event) => {
+  void post('/api/hud', { enabled: (event.target as HTMLInputElement).checked });
+});
 element('terms-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const input = element('term') as HTMLInputElement;
   try {
-    const response = await fetch('/api/terms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ term: input.value }) });
-    if (!response.ok) throw new Error('Unavailable');
-    const value = await response.json() as { id: string };
-    input.value = '';
-    const li = document.createElement('li'); li.textContent = `Blocked term ID: ${value.id} `;
-    const remove = document.createElement('button'); remove.textContent = 'Remove term';
-    remove.addEventListener('click', async () => {
-      const response = await fetch(`/api/terms/${encodeURIComponent(value.id)}`, { method: 'DELETE' });
-      if (response.ok) li.remove(); else { text('error', 'Term removal unavailable'); hidden('error', false); }
+    const response = await fetch('/api/terms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: input.value }),
     });
-    li.append(remove); element('terms')?.append(li);
-  } catch { text('error', 'Blocked term unavailable. Check Twitch authorization.'); hidden('error', false); }
+    if (!response.ok) throw new Error('Unavailable');
+    const value = (await response.json()) as { id: string };
+    input.value = '';
+    const li = document.createElement('li');
+    li.textContent = `Blocked term ID: ${value.id} `;
+    const remove = document.createElement('button');
+    remove.textContent = 'Remove term';
+    remove.addEventListener('click', async () => {
+      const response = await fetch(`/api/terms/${encodeURIComponent(value.id)}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) li.remove();
+      else {
+        text('error', 'Term removal unavailable');
+        hidden('error', false);
+      }
+    });
+    li.append(remove);
+    element('terms')?.append(li);
+  } catch {
+    text('error', 'Blocked term unavailable. Check Twitch authorization.');
+    hidden('error', false);
+  }
 });
 function chart(state: Snapshot): void {
   const svg = element('curves') as SVGSVGElement | null;
@@ -75,7 +167,8 @@ function chart(state: Snapshot): void {
   text('chart-source', selection?.provenance(state.simulated) ?? 'Current session');
   if (svg) drawTelemetry(svg, points, take?.events ?? state.presentationEvents ?? []);
   const label = correlationText(points);
-  text('correlation', label ?? ''); hidden('correlation', label === null);
+  text('correlation', label ?? '');
+  hidden('correlation', label === null);
 }
 
 function render(state: Snapshot): void {
@@ -84,67 +177,193 @@ function render(state: Snapshot): void {
   hidden('scene-panel', false);
   element('scene-panel')?.setAttribute('data-live', String(!state.simulated));
   text('frame-provenance', state.simulated ? 'SIMULATED / FIXTURE' : 'PRIVATE / MEMORY ONLY');
-  text('frame-caption', state.simulated ? 'Illustrative fixture · mock vision · SIMULATED' : 'Last successful analysis · memory only · never public');
+  text(
+    'frame-caption',
+    state.simulated
+      ? 'Illustrative fixture · mock vision · SIMULATED'
+      : 'Last successful analysis · memory only · never public',
+  );
   hidden('terms-panel', state.simulated);
   hidden('recalibrate', state.simulated);
   const scene = element('scene');
-  if (scene) scene.style.filter = state.simulated && state.exposure.active ? 'blur(15px) saturate(.3)' : 'none';
+  if (scene)
+    scene.style.filter =
+      state.simulated && state.exposure.active ? 'blur(15px) saturate(.3)' : 'none';
   animateNumber(element('exposure'), state.exposure.score);
   const ring = element('exposure-ring');
-  if (ring) ring.style.strokeDashoffset = String(100 - state.exposure.score); meter('exposure-meter', state.exposure.score);
+  if (ring) ring.style.strokeDashoffset = String(100 - state.exposure.score);
+  meter('exposure-meter', state.exposure.score);
   animateNumber(element('energy'), state.energy);
   const fill = element('stamina-fill');
   if (fill) fill.style.width = `${state.energy ?? 0}%`;
-  document.body.dataset.energy = state.energy === null ? 'unavailable' : state.energy <= 30 ? 'low' : 'available';
+  document.body.dataset.energy =
+    state.energy === null ? 'unavailable' : state.energy <= 30 ? 'low' : 'available';
   const rally = element('rally-fill');
   if (rally) rally.style.width = `${state.rally?.meter ?? 0}%`;
   text('rally-value', `${state.rally?.meter ?? 0}%`);
   renderRelay(app.querySelector('.relay-track'), state.tagout.phase, state.tagout.returning);
-  const qr=(state as unknown as {qrGuard?:QrView}).qrGuard;
-  const privacy = state.simulated ? state.exposure.active : !!(state as unknown as { privacyActive: boolean }).privacyActive||qr?.active===true;
-  const indicator=element('qr-indicator');
-  if(indicator){indicator.dataset.state=qr?.status??'disabled';indicator.textContent=qr?.enabled?`QR Guard · ${qr.status}${qr.lastLatency?` · ${Math.round(qr.lastLatency.captureToSceneMs)}ms`:''}`:'PRIVATE SIGNAL';indicator.title=qr?.enabled?`Last capture → Privacy${qr.lastLatency?`: ${qr.lastLatency.captureToSceneMs.toFixed(1)}ms; detection → scene ${qr.lastLatency.decisionToSceneMs.toFixed(1)}ms`:': awaiting protection'}${(qr.suppressUntil??0)>Date.now()?'; manual override grace active':''}`:'';}
+  const qr = (state as unknown as { qrGuard?: QrView }).qrGuard;
+  const privacy = state.simulated
+    ? state.exposure.active
+    : !!(state as unknown as { privacyActive: boolean }).privacyActive || qr?.active === true;
+  const indicator = element('qr-indicator');
+  if (indicator) {
+    indicator.dataset.state = qr?.status ?? 'disabled';
+    indicator.textContent = qr?.enabled
+      ? `QR Guard · ${qr.status}${qr.lastLatency ? ` · ${Math.round(qr.lastLatency.captureToSceneMs)}ms` : ''}`
+      : 'PRIVATE SIGNAL';
+    indicator.title = qr?.enabled
+      ? `Last capture → Privacy${qr.lastLatency ? `: ${qr.lastLatency.captureToSceneMs.toFixed(1)}ms; detection → scene ${qr.lastLatency.decisionToSceneMs.toFixed(1)}ms` : ': awaiting protection'}${(qr.suppressUntil ?? 0) > Date.now() ? '; manual override grace active' : ''}`
+      : '';
+  }
   hidden('privacy-state', !privacy);
   if (document.body.dataset.privacy !== String(privacy)) {
     document.body.dataset.privacy = String(privacy);
-    if (privacy && !matchMedia('(prefers-reduced-motion: reduce)').matches) element('privacy-flash')?.animate([{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'translateY(0)', offset: .2 }, { opacity: 1, offset: .7 }, { opacity: 0 }], { duration: 1600, easing: 'ease-out' });
-  } meter('energy-meter', state.energy ?? 0);
-  text('analysis', state.analysis !== 'available' ? 'analysis unavailable' : state.exposure.active ? state.simulated ? 'Privacy action active · simulated' : (state as unknown as { actionStatus: string }).actionStatus : state.exposure.score < 60 ? 'no obvious clues detected' : 'Identifying clues detected');
-  text('calibration', state.simulated ? 'Simulated personal baseline · accelerated time' : `${(state as unknown as { audioSimulated?: boolean }).audioSimulated ? 'SIMULATED file · ' : ''}Personal baseline: ${Math.round(state.calibration * 100)}% · ${(state as unknown as { sensorStatus: string }).sensorStatus ?? 'sensor unavailable'}`);
-  text('chat', `${state.chat.messagesPerMinute} messages/min · ${state.chat.uniqueChattersPerMinute} unique chatters/min`);
+    if (privacy && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+      element('privacy-flash')?.animate(
+        [
+          { opacity: 0, transform: 'translateY(12px)' },
+          { opacity: 1, transform: 'translateY(0)', offset: 0.2 },
+          { opacity: 1, offset: 0.7 },
+          { opacity: 0 },
+        ],
+        { duration: 1600, easing: 'ease-out' },
+      );
+  }
+  meter('energy-meter', state.energy ?? 0);
+  text(
+    'analysis',
+    state.analysis !== 'available'
+      ? 'analysis unavailable'
+      : state.exposure.active
+        ? state.simulated
+          ? 'Privacy action active · simulated'
+          : (state as unknown as { actionStatus: string }).actionStatus
+        : state.exposure.score < 60
+          ? 'no obvious clues detected'
+          : 'Identifying clues detected',
+  );
+  text(
+    'calibration',
+    state.simulated
+      ? 'Simulated personal baseline · accelerated time'
+      : `${(state as unknown as { audioSimulated?: boolean }).audioSimulated ? 'SIMULATED file · ' : ''}Personal baseline: ${Math.round(state.calibration * 100)}% · ${(state as unknown as { sensorStatus: string }).sensorStatus ?? 'sensor unavailable'}`,
+  );
+  text(
+    'chat',
+    `${state.chat.messagesPerMinute} messages/min · ${state.chat.uniqueChattersPerMinute} unique chatters/min`,
+  );
 
-  const partner = state.crew.find((peer) => peer.id === state.tagout.partnerId) ?? state.crew.toSorted((a, b) => b.energy - a.energy)[0];
-  text('partner', partner ? `${state.simulated ? 'Crew partner' : partner.id} · ${partner.energy}% energy` : 'No crew connected');
-  text('relay-status', state.simulated ? 'Scripted partner · SIMULATED' : (state as unknown as { status?: string }).status ?? '');
-  text('raid-phase', state.tagout.phase === 'raiding' ? state.simulated ? 'Simulated countdown · waiting for raid event' : `${(state as unknown as { countdownSeconds: number }).countdownSeconds}s · waiting for Twitch raid event` : state.tagout.phase);
+  const partner =
+    state.crew.find((peer) => peer.id === state.tagout.partnerId) ??
+    state.crew.toSorted((a, b) => b.energy - a.energy)[0];
+  text(
+    'partner',
+    partner
+      ? `${state.simulated ? 'Crew partner' : partner.id} · ${partner.energy}% energy`
+      : 'No crew connected',
+  );
+  text(
+    'relay-status',
+    state.simulated
+      ? 'Scripted partner · SIMULATED'
+      : ((state as unknown as { status?: string }).status ?? ''),
+  );
+  text(
+    'raid-phase',
+    state.tagout.phase === 'raiding'
+      ? state.simulated
+        ? 'Simulated countdown · waiting for raid event'
+        : `${(state as unknown as { countdownSeconds: number }).countdownSeconds}s · waiting for Twitch raid event`
+      : state.tagout.phase,
+  );
   hidden('rally-alert', !state.rally?.celebrating);
-  hidden('combined', !state.combinedAlert); hidden('dismiss', !privacy);
+  hidden('combined', !state.combinedAlert);
+  hidden('dismiss', !privacy);
   hidden('request-relay', !['idle', 'home'].includes(state.tagout.phase));
-  hidden('approve', !['suggested', 'tag-back'].includes(state.tagout.phase) || (!state.simulated && !(state as unknown as { canApprove: boolean }).canApprove));
-  text('approve', state.tagout.phase === 'tag-back' ? state.simulated ? 'Partner: approve simulated tag back' : 'Approve tag back from this channel' : state.simulated ? 'Approve simulated raid' : 'Approve raid from this channel');
-  hidden('cancel', !['suggested', 'confirming', 'raiding', 'tag-back'].includes(state.tagout.phase)); hidden('back', state.tagout.phase !== 'covered' || (!state.simulated && !(state as unknown as { coveringFor: string | null }).coveringFor));
+  hidden(
+    'approve',
+    !['suggested', 'tag-back'].includes(state.tagout.phase) ||
+      (!state.simulated && !(state as unknown as { canApprove: boolean }).canApprove),
+  );
+  text(
+    'approve',
+    state.tagout.phase === 'tag-back'
+      ? state.simulated
+        ? 'Partner: approve simulated tag back'
+        : 'Approve tag back from this channel'
+      : state.simulated
+        ? 'Approve simulated raid'
+        : 'Approve raid from this channel',
+  );
+  hidden(
+    'cancel',
+    !['suggested', 'confirming', 'raiding', 'tag-back'].includes(state.tagout.phase),
+  );
+  hidden(
+    'back',
+    state.tagout.phase !== 'covered' ||
+      (!state.simulated && !(state as unknown as { coveringFor: string | null }).coveringFor),
+  );
   const clues = element('clues');
   if (clues) {
     const keys = new Set(state.clues.map((clue) => clue.category));
-    for (const child of clues.querySelectorAll<HTMLElement>('[data-clue]')) if (!keys.has(child.dataset.clue as Snapshot['clues'][number]['category'])) child.remove();
+    for (const child of clues.querySelectorAll<HTMLElement>('[data-clue]'))
+      if (!keys.has(child.dataset.clue as Snapshot['clues'][number]['category'])) child.remove();
     for (const [index, clue] of state.clues.entries()) {
       let chip = clues.querySelector<HTMLElement>(`[data-clue="${clue.category}"]`);
       if (!chip) {
-        chip = document.createElement('li'); chip.dataset.clue = clue.category; chip.style.animationDelay = `${index * 90}ms`;
-        const icon = document.createElement('i'); icon.textContent = '⌁';
-        const label = document.createElement('span'); label.textContent = clue.description;
-        const confidence = document.createElement('b'); chip.append(icon, label, confidence); clues.append(chip);
+        chip = document.createElement('li');
+        chip.dataset.clue = clue.category;
+        chip.style.animationDelay = `${index * 90}ms`;
+        const icon = document.createElement('i');
+        icon.textContent = '⌁';
+        const label = document.createElement('span');
+        label.textContent = clue.description;
+        const confidence = document.createElement('b');
+        chip.append(icon, label, confidence);
+        clues.append(chip);
       }
       chip.querySelector('b')!.textContent = `${Math.round(clue.confidence * 100)}%`;
     }
   }
   const timeline = element('timeline');
-  const replay=[...state.timeline.filter(entry=>entry.actions.length>0).map(entry=>({at:entry.at,label:`${elapsedTime(entry.at-(state.curves[0]?.at??entry.at))} · score ${entry.score} · ${entry.actions.join(' + ')}${state.simulated?' · SIMULATED':''}`})),...((state as unknown as {qrEvents?:{at:number;reason:string}[]}).qrEvents??[]).map(entry=>({at:entry.at,label:`${new Date(entry.at).toLocaleTimeString()} · qr_guard · Privacy applied`}))];
-  timeline?.replaceChildren(...replay.sort((a,b)=>a.at-b.at).slice(-5).map(entry=>{const li=document.createElement('li');li.textContent=entry.label;return li;}));
-  const flags = state.moderation.filter(entry => entry.action === 'flag');
+  const replay = [
+    ...state.timeline
+      .filter((entry) => entry.actions.length > 0)
+      .map((entry) => ({
+        at: entry.at,
+        label: `${elapsedTime(entry.at - (state.curves[0]?.at ?? entry.at))} · score ${entry.score} · ${entry.actions.join(' + ')}${state.simulated ? ' · SIMULATED' : ''}`,
+      })),
+    ...((state as unknown as { qrEvents?: { at: number; reason: string }[] }).qrEvents ?? []).map(
+      (entry) => ({
+        at: entry.at,
+        label: `${new Date(entry.at).toLocaleTimeString()} · qr_guard · Privacy applied`,
+      }),
+    ),
+  ];
+  timeline?.replaceChildren(
+    ...replay
+      .sort((a, b) => a.at - b.at)
+      .slice(-5)
+      .map((entry) => {
+        const li = document.createElement('li');
+        li.textContent = entry.label;
+        return li;
+      }),
+  );
+  const flags = state.moderation.filter((entry) => entry.action === 'flag');
   hidden('mod-notice', flags.length === 0);
   text('mod-notice', `MOD REVIEW · ${flags.length} flagged for review. Messages remain in chat.`);
-  text('moderation', `${state.moderation.length} ${state.simulated ? 'simulated ' : ''}moderation record(s) · latest IDs: ${state.moderation.slice(0,3).map(entry => `${entry.id}: ${entry.action}`).join(', ') || 'none'}`);
+  text(
+    'moderation',
+    `${state.moderation.length} ${state.simulated ? 'simulated ' : ''}moderation record(s) · latest IDs: ${
+      state.moderation
+        .slice(0, 3)
+        .map((entry) => `${entry.id}: ${entry.action}`)
+        .join(', ') || 'none'
+    }`,
+  );
   chart(state);
 }
 async function updatePrivateFrame(state: Snapshot): Promise<void> {
@@ -152,51 +371,127 @@ async function updatePrivateFrame(state: Snapshot): Promise<void> {
   if (!image) return;
   try {
     if (state.analysis !== 'available') throw new Error('Unavailable');
-    const response = await fetch('/api/private/frame', { headers: { 'X-Spotter-Preview': 'private-dashboard' }, cache: 'no-store' });
+    const response = await fetch('/api/private/frame', {
+      headers: { 'X-Spotter-Preview': 'private-dashboard' },
+      cache: 'no-store',
+    });
     if (!response.ok) throw new Error('Unavailable');
-    const frame = await response.json() as { image: string; at: number; clues: Snapshot['clues'] } | null;
-    if (!frame || !/^data:image\/(jpeg|png);base64,/.test(frame.image)) throw new Error('Unavailable');
-    image.src = frame.image; hidden('frame-empty', true);
-    text('frame-caption', `Analyzed ${new Date(frame.at).toLocaleTimeString()} · memory only · never public`);
-    element('frame-clues')?.replaceChildren(...frame.clues.map(clue => { const li = document.createElement('li'); li.textContent = clue.description; return li; }));
-  } catch { image.removeAttribute('src'); hidden('frame-empty', false); element('frame-clues')?.replaceChildren(); }
+    const frame = (await response.json()) as {
+      image: string;
+      at: number;
+      clues: Snapshot['clues'];
+    } | null;
+    if (!frame || !/^data:image\/(jpeg|png);base64,/.test(frame.image))
+      throw new Error('Unavailable');
+    image.src = frame.image;
+    hidden('frame-empty', true);
+    text(
+      'frame-caption',
+      `Analyzed ${new Date(frame.at).toLocaleTimeString()} · memory only · never public`,
+    );
+    element('frame-clues')?.replaceChildren(
+      ...frame.clues.map((clue) => {
+        const li = document.createElement('li');
+        li.textContent = clue.description;
+        return li;
+      }),
+    );
+  } catch {
+    image.removeAttribute('src');
+    hidden('frame-empty', false);
+    element('frame-clues')?.replaceChildren();
+  }
 }
 async function refresh(): Promise<void> {
   try {
     const response = await fetch('/api/status');
     if (!response.ok) throw new Error('Unavailable');
-    const state = await response.json() as Snapshot & { enabled?: boolean; phase?: string; coveringFor?: string | null; hudEnabled?: boolean };
+    const state = (await response.json()) as Snapshot & {
+      enabled?: boolean;
+      phase?: string;
+      coveringFor?: string | null;
+      hudEnabled?: boolean;
+    };
     isSimulated = state.simulated;
     const hud = element('hud') as HTMLInputElement | null;
     if (hud && !busy) hud.checked = state.hudEnabled ?? false;
-    hidden('simulated', !(state.simulated || (state as unknown as { audioSimulated?: boolean }).audioSimulated));
+    hidden(
+      'simulated',
+      !(state.simulated || (state as unknown as { audioSimulated?: boolean }).audioSimulated),
+    );
     {
-      text('connection', state.simulated ? '● Demo session · accelerated time' : '● Local session · integrations disconnected');
+      text(
+        'connection',
+        state.simulated
+          ? '● Demo session · accelerated time'
+          : '● Local session · integrations disconnected',
+      );
       hidden('twitch-connect', state.simulated);
       if (!state.simulated && page === 'dashboard') {
         render(state);
         await updatePrivateFrame(state);
         try {
           const response = await fetch('/api/latency');
-          const measurement = await response.json() as { captureIntervalMs: number; live: { scene: { n: number; medianMs: number | null; p95Ms: number | null } } | null; benchmark: { at: string; intervalMs: number; simulatedInput?: boolean; scene: { n: number; medianMs: number | null; p95Ms: number | null } } | null };
-          const useLive = !!measurement.live?.scene.n; const stats = useLive ? measurement.live!.scene : measurement.benchmark?.scene;
-          text('latency', stats?.n ? `Capture → OBS ${useLive ? 'live' : measurement.benchmark?.simulatedInput ? 'benchmark · SIMULATED input' : 'benchmark'} · median ${(stats.medianMs! / 1000).toFixed(2)}s · p95 ${(stats.p95Ms! / 1000).toFixed(2)}s · n=${stats.n} · every ${(useLive ? measurement.captureIntervalMs : measurement.benchmark!.intervalMs) / 1000}s` : 'Latency: awaiting confirmed scene changes');
-        } catch { text('latency', 'Latency unavailable'); }
-        const live = state as unknown as { twitch: { connected: boolean; status: string }; chat: { messagesPerMinute: number; uniqueChattersPerMinute: number } };
+          const measurement = (await response.json()) as {
+            captureIntervalMs: number;
+            live: { scene: { n: number; medianMs: number | null; p95Ms: number | null } } | null;
+            benchmark: {
+              at: string;
+              intervalMs: number;
+              simulatedInput?: boolean;
+              scene: { n: number; medianMs: number | null; p95Ms: number | null };
+            } | null;
+          };
+          const useLive = !!measurement.live?.scene.n;
+          const stats = useLive ? measurement.live!.scene : measurement.benchmark?.scene;
+          text(
+            'latency',
+            stats?.n
+              ? `Capture → OBS ${useLive ? 'live' : measurement.benchmark?.simulatedInput ? 'benchmark · SIMULATED input' : 'benchmark'} · median ${(stats.medianMs! / 1000).toFixed(2)}s · p95 ${(stats.p95Ms! / 1000).toFixed(2)}s · n=${stats.n} · every ${(useLive ? measurement.captureIntervalMs : measurement.benchmark!.intervalMs) / 1000}s`
+              : 'Latency: awaiting confirmed scene changes',
+          );
+        } catch {
+          text('latency', 'Latency unavailable');
+        }
+        const live = state as unknown as {
+          twitch: { connected: boolean; status: string };
+          chat: { messagesPerMinute: number; uniqueChattersPerMinute: number };
+        };
         text('connection', `● Twitch: ${live.twitch.status}`);
-        text('chat', live.twitch.connected ? `${live.chat.messagesPerMinute} messages/min · ${live.chat.uniqueChattersPerMinute} unique chatters/min` : 'Chat activity unavailable');
+        text(
+          'chat',
+          live.twitch.connected
+            ? `${live.chat.messagesPerMinute} messages/min · ${live.chat.uniqueChattersPerMinute} unique chatters/min`
+            : 'Chat activity unavailable',
+        );
       }
       if (state.simulated && page === 'dashboard') {
         render(state);
         const scene = element('scene') as HTMLImageElement | null;
         if (scene) {
           const frameResponse = await fetch('/api/demo/frame');
-          if (frameResponse.ok) { const frame = await frameResponse.json() as { image: string }; scene.src = frame.image; hidden('frame-empty', true); }
+          if (frameResponse.ok) {
+            const frame = (await frameResponse.json()) as { image: string };
+            scene.src = frame.image;
+            hidden('frame-empty', true);
+          }
         }
       }
       hidden('error', true);
     }
-  } catch { text('error', 'analysis unavailable · server disconnected'); hidden('error', false); text('connection', '● Disconnected'); const qrIndicator=element('qr-indicator');if(qrIndicator&&qrIndicator.dataset.state&&qrIndicator.dataset.state!=='disabled'){qrIndicator.textContent='QR Guard · unavailable';qrIndicator.dataset.state='unavailable';qrIndicator.title='Server disconnected';} }
+  } catch {
+    text('error', 'analysis unavailable · server disconnected');
+    hidden('error', false);
+    text('connection', '● Disconnected');
+    const qrIndicator = element('qr-indicator');
+    if (qrIndicator && qrIndicator.dataset.state && qrIndicator.dataset.state !== 'disabled') {
+      qrIndicator.textContent = 'QR Guard · unavailable';
+      qrIndicator.dataset.state = 'unavailable';
+      qrIndicator.title = 'Server disconnected';
+    }
+  }
 }
 void refresh();
-setInterval(() => { void refresh(); }, 1_000);
+setInterval(() => {
+  void refresh();
+}, 1_000);

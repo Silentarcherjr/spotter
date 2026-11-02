@@ -3,9 +3,12 @@ import { obsSetupNames } from './setup.ts';
 /** Copy unrelated lines opaquely: credentials are never parsed, returned separately or logged. */
 export function updateObsEnv(source: string): string {
   const values: Record<string, string> = {
-    OBS_MAIN_SCENE: obsSetupNames.main, OBS_PRIVACY_SCENE: obsSetupNames.scene,
-    OBS_SOURCE: obsSetupNames.media, OBS_OVERLAY_SOURCE: obsSetupNames.overlay,
-    OBS_PRIVACY_SOURCE: obsSetupNames.privacy, OBS_BLUR_FILTER: '',
+    OBS_MAIN_SCENE: obsSetupNames.main,
+    OBS_PRIVACY_SCENE: obsSetupNames.scene,
+    OBS_SOURCE: obsSetupNames.media,
+    OBS_OVERLAY_SOURCE: obsSetupNames.overlay,
+    OBS_PRIVACY_SOURCE: obsSetupNames.privacy,
+    OBS_BLUR_FILTER: '',
   };
   const pending = new Set(Object.keys(values));
   const lines: string[] = [];

@@ -1,12 +1,20 @@
 const tweens = new WeakMap<HTMLElement, number>();
 export function animateNumber(element: HTMLElement | null, value: number | null): void {
   if (!element) return;
-  if (value === null) { cancelAnimationFrame(tweens.get(element) ?? 0); element.textContent = '—'; delete element.dataset.target; return; }
+  if (value === null) {
+    cancelAnimationFrame(tweens.get(element) ?? 0);
+    element.textContent = '—';
+    delete element.dataset.target;
+    return;
+  }
   if (element.dataset.target === String(value)) return;
   element.dataset.target = String(value);
   cancelAnimationFrame(tweens.get(element) ?? 0);
   const from = Number(element.textContent) || 0;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { element.textContent = String(value); return; }
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    element.textContent = String(value);
+    return;
+  }
   const start = performance.now();
   const tick = (now: number) => {
     const progress = Math.min(1, (now - start) / 650);
