@@ -11,9 +11,9 @@ Most Twitch tools watch the chat. **Spotter watches the streamer**: how exposed 
 - **Innovation:** Existing privacy tools (StreamSafe, PrivaStream) only blur faces, plates or personal text; none reasons about how *findable* a streamer is from the frame as a whole.
 - **Impact:** IRL safety is a live concern for Twitch (TwitchCon 2026 added no-filming zones and lanyards). Burnout affects every streamer. Every streamer can use the energy module daily; IRL streamers use the whole tool on every outing.
 - **Tech:** Real-time vision + audio analysis, Twitch EventSub, Helix moderation, raids, OBS automation, with a deterministic, tested decision core.
-- **Design:** Three visual moments a judge understands in 10 seconds (findability meter climbing, stamina bar draining, a raid baton passing between two streams).
+- **Design:** Three visual moments a viewer understands in 10 seconds (findability meter climbing, stamina bar draining, a raid baton passing between two streams).
 
-## Core rule: the model interprets, the code decides
+## Core rule: observations from the model, decisions from tested code
 
 Models only return structured observations (clues, confidences, classifications). All scores, thresholds and actions are pure TypeScript with unit tests. No model output ever triggers an action directly.
 
