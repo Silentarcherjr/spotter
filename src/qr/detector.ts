@@ -18,6 +18,13 @@ export function detectQr(bytes:Buffer):QrObservation{
   try{
     const matrix=new Binarizer(new Luminance(gray,width,height)).getBlackMatrix();
     const located=new Detector(matrix).detect(new Map([[Hint.TRY_HARDER,true]]));
+    // Inspect ONLY fixed finder/timing cells, never format/data payload cells.
+    const grid=located.getBits();const dimension=grid.getWidth();let timingMatch=0,timingTotal=0,finderMatch=0;
+    for(let index=8;index<dimension-8;index++){const expected=index%2===0;timingMatch+=Number(grid.get(index,6)===expected)+Number(grid.get(6,index)===expected);timingTotal+=2;}
+    for(const [left,top] of [[0,0],[dimension-7,0],[0,dimension-7]])for(let y=0;y<7;y++)for(let x=0;x<7;x++){
+      const expected=x===0||y===0||x===6||y===6||x>=2&&x<=4&&y>=2&&y<=4;finderMatch+=Number(grid.get(left!+x,top!+y)===expected);
+    }
+    if(!timingTotal||timingMatch/timingTotal<.8||finderMatch/147<.75)return {detected:false,box:null,confidence:0};
     const points=located.getPoints();if(points.length<3)throw Error('Invalid geometry');
     const [bottomLeft,topLeft,topRight]=points;
     const xs=[bottomLeft!.getX(),topLeft!.getX(),topRight!.getX(),bottomLeft!.getX()+topRight!.getX()-topLeft!.getX()];

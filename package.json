@@ -26,7 +26,10 @@
     "crew:retire": "node --experimental-strip-types --env-file-if-exists=.env scripts/crew-retire.ts",
     "eval": "node --experimental-strip-types --env-file-if-exists=.env scripts/evaluate.ts",
     "bench:latency": "node --experimental-strip-types --env-file-if-exists=.env scripts/latency.ts",
-    "qr:obs-probe": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-obs-probe.ts"
+    "qr:obs-probe": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-obs-probe.ts",
+    "qr:fixtures": "node --experimental-strip-types scripts/qr-fixtures.ts",
+    "qr:eval": "node --experimental-strip-types scripts/evaluate-qr.ts",
+    "qr:benchmark": "node --experimental-strip-types --env-file-if-exists=.env scripts/qr-benchmark.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",

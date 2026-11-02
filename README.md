@@ -256,7 +256,7 @@ Scores and thresholds are initial deterministic heuristics, not validated safety
 
 ## Checks and Codex
 
-**152 automated tests (152 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
+**153 automated tests (153 passing, 0 failing, 0 skipped)** currently cover core decisions, contracts, service adapters, the scripted story, numeric WebSocket transport, persistence and process-level startup/shutdown. Browser QA covered the demo, report, mic refusal in SIM and transparent overlays at 1280×720 and 1920×1080.
 
 ```sh
 npm test
@@ -354,3 +354,13 @@ The natural sample is a development-unseen, author-labelled holdout, not indepen
 ## QR Guard feasibility (in progress)
 
 QR Guard implementation is available (`QR_GUARD=1` by default in real OBS mode); performance and Twitch proof are still pending. The local geometry detector never invokes payload decoding. `npm run qr:obs-probe` checks the stock OBS Render Delay topology with synthetic colors:500ms on Main and screenshots of an unfiltered child source. It refuses active stream/record outputs, restores the original scene and removes its temporary source/filter. Captures stay in RAM; only numeric timing results go to ignored data/takes/qr-guard/. Real OBS33.0.0 verified the topology:500ms on Main, unfiltered child ahead by407–476ms (median441ms,n8, polling uncertainty up to42ms). Uniform-color JPEG1280px capture median7.87ms,p9510.46ms,n50; natural-video/detector timing and Twitch player verification remain pending. No pre-air protection claim is made. See [QR Guard investigation](docs/QR_GUARD.md).
+
+## QR Guard local path and measured limits
+
+Real mode defaults to `QR_GUARD=1`: independent local geometry checks, one hit by default, no payload decoding or AI, shared privacy ownership, automatic clean recovery and explicit Dismiss grace. Privacy uses the stock Cut override; Main has500ms Render Delay and its old buffer is cleared before restoration. QR status/timing/audit are private; public overlay/Privacy disclose no QR reason.
+
+Controlled real OBS benchmark(n20): detection→scene median6.45ms,p958.03ms; capture→scene median82.46ms,p9591.28ms, plus sampling phase (nominally up to150ms) and actual frame/render/network delays. This is a QR test clip and OBS confirmation, not proof about viewer pixels. Live Twitch proof is pending.
+
+Detection regression:32/36 synthetic QR cases, including6 encoded moving-video frames, and0/24 detections in no-obvious-QR IRL samples. All tested64px+ cases detected; four rotated36/48px cases missed. Fixed-pattern validation reduced the initial2/24 forest false positives while retaining26/30 original positive hits; those same cases informed tuning, so this is not an unseen holdout. Binary confidence means structural match, not content verification or a calibrated probability. Standard QR only. Tiny codes, blur, occlusion and untested cameras remain limits. See [EVAL.md](docs/EVAL.md) and [QR setup/design](docs/QR_GUARD.md). A safety net, not a guarantee.
+
+Commands: `npm run qr:fixtures` (silent TEST-ONLY clip), `npm run qr:fixtures -- --moving` (moving variant), `npm run qr:eval` (local accuracy, existing clips required), `npm run qr:benchmark` (20 real protections, outputs stopped). All image processing stays in RAM; only original synthetic input clips and numeric reports live in ignored data/takes/qr-guard/.
